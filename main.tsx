@@ -21,7 +21,7 @@ async function* CounterElement({ delay, initial, children }: { delay: number, in
 }
 
 render(
-  document.body, [],
+  document.body,
   <CounterElement delay={1000} initial={1000}>
     <ParentElement><Hello to="world" /></ParentElement>
   </CounterElement>
