@@ -1,0 +1,3 @@
+#!/bin/sh
+
+deno bundle --watch -c tsconfig.json main.tsx main.js
