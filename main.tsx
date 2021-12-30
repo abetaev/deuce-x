@@ -11,12 +11,12 @@ type CounterProps = { value: number }
 async function* Counter({value}: CounterProps) {
   while (true) {
     value ++
-    console.log(value)
+    // console.log(value)
     yield (
       <div>
         <div>{value}</div>
         <button onClick={() => console.log(value)}>poo</button>
-        {value % 2 ? <Counter value={value}/> : null}
+        {value % 7 ? <Counter value={value}/> : null}
       </div >
     )
     await new Promise(resolve => setTimeout(resolve, 1000))
