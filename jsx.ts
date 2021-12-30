@@ -6,7 +6,7 @@ declare namespace JSX {
 
 	type Children = undefined | Element | Element[]
 
-	type Element = ActiveElement | IntrinsicElement | TextElement
+	type Element = ActiveElement | IntrinsicElement | TextElement | null
 
 	type ActiveElement = AsyncIterator<Element, Element | void, undefined>
 	type NodeElement = {
@@ -19,7 +19,6 @@ declare namespace JSX {
 
 	interface ElementChildrenAttribute {
     children?: Children;
-		context?: any
   }
 
   type IntrinsicElements = HTMLElements & SVGElements

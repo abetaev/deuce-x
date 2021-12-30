@@ -3,27 +3,36 @@
 import { createElement, render } from './core.ts'
 import { Children } from './jsx.ts'
 
-const ParentElement = ({ children }: { children: Children }) => <div id="parent">{children}</div>
+const ParentElement = ({ children }: { children: Children }) => <div class="parent">{children}</div>
 
 const Hello = ({ to }: { to: string }) => <div>hello, {to}!!!</div>
 
-type CounterProps = { value: number }
-async function* Counter({value}: CounterProps) {
-  while (true) {
-    value ++
-    console.log(value)
+function useEvent<T>(): [(data: T) => void, Promise<T>] {
+  let satisfy: undefined | ((data: T) => void) = undefined
+  const promise = new Promise<T>(resolve => satisfy = resolve)
+  if (!satisfy) throw `unsatistyable`
+  return [satisfy, promise]
+}
+
+type LiveProps = { value: number }
+async function* Live({ value }: LiveProps) {
+  while (value < 10) {
+    const [resolve, promise] = useEvent<number>()
     yield (
       <div>
-        <div>{value}</div>
-        <button onClick={() => console.log(value)}>poo</button>
-        {value % 2 ? <Counter value={value}/> : null}
-      </div >
+        <ParentElement>
+          <Hello to={`${value}`} />
+        </ParentElement>
+        <ParentElement>
+          <button onClick={() => resolve(value + 1)}>click me!</button>
+        </ParentElement>
+      </div>
     )
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    value = await promise
   }
 }
 
 render(
   document.body,
-  <Counter value={132} />
+  <Live value={1} />
 )
