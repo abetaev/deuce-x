@@ -13,7 +13,14 @@ type Component<TProps extends JSX.Props> = IntrinsicComponent | SyntheticCompone
 
 export const createElement = <TProps extends JSX.Props>(component: Component<TProps>, props: TProps, ...children: JSX.Element[]): JSX.Element => {
 
-  const isIntrinsicComponent = (component: Component<TProps>): component is IntrinsicComponent => typeof component === "string"
+  const isIntrinsicComponent = (component: Component<TProps>): component is IntrinsicComponent =>
+    typeof component === "string";
+
+  const isActiveComponent = (component: Component<TProps>): component is ActiveComponent<TProps> =>
+    typeof component === "function" && component.constructor.name === "AsyncGeneratorFunction";
+
+  const isStaticComponent = (component: Component<TProps>): component is StaticComponent<TProps> =>
+    typeof component === "function" && component.constructor.name === "Function"
 
   if (isIntrinsicComponent(component)) {
     return {
@@ -28,44 +35,55 @@ export const createElement = <TProps extends JSX.Props>(component: Component<TPr
 }
 
 type Context = Node[]
-export const render = (target: Element, children: JSX.Children, context: Context = []) => {
+export const render = (target: Element, children: JSX.Children, previous: Context = []): Context => {
 
   const isTextElement = (element: JSX.Element): element is JSX.TextElement =>
     typeof element === "string" || typeof element === "boolean" || typeof element === "number"
 
-  const isDOMElement = (element: JSX.IntrinsicElement | JSX.SyntheticElement): element is JSX.IntrinsicElement =>
-    "name" in element
+  const isDOMElement = (element: JSX.IntrinsicElement | JSX.ActiveElement): element is JSX.IntrinsicElement =>
+    typeof element === "object" && "name" in element
 
-  const isActiveElement = (element: JSX.SyntheticElement): element is JSX.SyntheticElement =>
+  const isActiveElement = (element: JSX.ActiveElement): element is JSX.ActiveElement =>
     "next" in element
 
+  const current: Context = []
   children && (Array.isArray(children) ? children : [children]).forEach((jsxElement, index) => {
     if (isTextElement(jsxElement)) {
-      const node = document.createTextNode(`${jsxElement}`)
-      const old = context[index]
-      context[index] = node
-      if (old) target.replaceChild(node, old)
-      else target.appendChild(node)
+      current[index] = document.createTextNode(`${jsxElement}`)
+      if (previous[index]) target.replaceChild(current[index], previous[index])
+      else target.appendChild(current[index])
     } else if (isDOMElement(jsxElement)) {
       const { name, props, children } = jsxElement;
       const node = document.createElement(name)
-      if (props)
-        Object.keys(props)
-          .forEach(name => node.setAttribute(name, `${props[name]}`))
+      if (props) Object.keys(props)
+        .forEach(name => {
+          if (name.match(/on[A-Z].*/)) node.addEventListener(name.substring(2).toLowerCase(), props[name as keyof JSX.Props])
+          else node.setAttribute(name.toLowerCase(), `${props[name as keyof JSX.Props]}`)
+        })
       if (children)
         (Array.isArray(children) ? children : [children])
           .forEach(child => render(node, child, []))
-      const old = context[index]
-      context[index] = node
-      if (old) target.replaceChild(node, old)
-      else target.appendChild(node)
+      current[index] = node
+      if (previous[index]) target.replaceChild(current[index], previous[index])
+      else target.appendChild(current[index])
     } else if (isActiveElement(jsxElement)) {
-      const context: Context = [];
-      (async () => {
-        for await (const element of { [Symbol.asyncIterator]: () => jsxElement }) {
-          render(target, element, context)
+      let active = true;
+      const node = async () => {
+        let context: Context = [];
+        let result = await jsxElement.next()
+        while (active && !result.done) {
+          context = render(target, result.value, context)
+          result = await jsxElement.next()
         }
-      })()
+      }
+      current[index]
+      const stop = () => { active = false }
     } else throw `unsupported element ${typeof jsxElement}`
   })
+
+  for (let index = current.length; index < previous.length; index++)
+    target.removeChild(previous[index])
+
+  return current
+
 }
