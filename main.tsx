@@ -7,22 +7,23 @@ const ParentElement = ({ children }: { children: Children }) => <div id="parent"
 
 const Hello = ({ to }: { to: string }) => <div>hello, {to}!!!</div>
 
-async function* CounterElement({ delay, initial, children }: { delay: number, initial: number, children: Children }) {
-  let counter = initial
+type CounterProps = { value: number }
+async function* Counter({value}: CounterProps) {
   while (true) {
-    await new Promise(resolve => setTimeout(resolve, delay))
+    value ++
+    console.log(value)
     yield (
       <div>
-        <div>{counter++}</div>
-        {children}
-      </div>
+        <div>{value}</div>
+        <button onClick={() => console.log(value)}>poo</button>
+        {value % 2 ? <Counter value={value}/> : null}
+      </div >
     )
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
 }
 
 render(
   document.body,
-  <CounterElement delay={1000} initial={1000}>
-    <ParentElement><Hello to="world" /></ParentElement>
-  </CounterElement>
+  <Counter value={132} />
 )

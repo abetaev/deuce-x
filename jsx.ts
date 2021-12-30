@@ -2,21 +2,24 @@ type DOMElement = Element
 
 declare namespace JSX {
 
-	type Props = ElementChildrenAttribute & Record<string, unknown>
+	type Props = ElementChildrenAttribute & HTMLAttributes & DOMAttributes<EventTarget>
 
-	type Element = SyntheticElement | IntrinsicElement | TextElement
 	type Children = undefined | Element | Element[]
 
-	type SyntheticElement = AsyncIterator<Element, Element | void, undefined>
-	type IntrinsicElement = {
+	type Element = ActiveElement | IntrinsicElement | TextElement
+
+	type ActiveElement = AsyncIterator<Element, Element | void, undefined>
+	type NodeElement = {
 		name: keyof IntrinsicElements
 		props: Props
 		children: Children
 	}
 	type TextElement = string | boolean | number
+	type IntrinsicElement = TextElement | NodeElement
 
 	interface ElementChildrenAttribute {
-    children?: Children; // specify children name to use
+    children?: Children;
+		context?: any
   }
 
   type IntrinsicElements = HTMLElements & SVGElements
