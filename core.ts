@@ -16,12 +16,6 @@ export const createElement = <TProps extends JSX.Props>(component: Component<TPr
   const isIntrinsicComponent = (component: Component<TProps>): component is IntrinsicComponent =>
     typeof component === "string";
 
-  const isActiveComponent = (component: Component<TProps>): component is ActiveComponent<TProps> =>
-    typeof component === "function" && component.constructor.name === "AsyncGeneratorFunction";
-
-  const isStaticComponent = (component: Component<TProps>): component is StaticComponent<TProps> =>
-    typeof component === "function" && component.constructor.name === "Function"
-
   if (isIntrinsicComponent(component)) {
     return {
       name: component,
@@ -34,11 +28,12 @@ export const createElement = <TProps extends JSX.Props>(component: Component<TPr
 
 }
 
-type LiveState = { type: "live", start: () => void, stop: () => void }
-type TreeState = { type: "tree", node: Node, children: ContextState[] }
-type ContextState = TreeState | LiveState
+type ActiveState = { type: "active", start: () => void, stop: () => void }
+type FutureState = { type: "future", promise: Promise<ContextState>, index: number }
+type DOMNodeState = { type: "tree", node: Node, children: ContextState[] }
+type ContextState = DOMNodeState | ActiveState | FutureState
 type Context<T = ContextState> = T[]
-export const render = (target: Element, children: JSX.Children, previous: Context<ContextState | undefined> = []): Context => {
+export const render = (target: Element, children: JSX.Children, previous: Context<ContextState> = []): Context => {
 
   const isTextElement = (element: JSX.Element): element is JSX.TextElement =>
     typeof element === "string" || typeof element === "boolean" || typeof element === "number"
@@ -49,44 +44,65 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
   const isActiveElement = (element: JSX.Element): element is JSX.ActiveElement =>
     element !== null && typeof element === "object" && "next" in element
 
+  const isFutureElement = (element: JSX.Element): element is Promise<Awaited<JSX.Element>> =>
+    element !== null && typeof element === "object" && "then" in element
+
   const current: Context = []
 
-  const mergeState = (currentState: ContextState | undefined, previousState: ContextState | undefined) => {
+  const mergeState = (currentState: ContextState, previousState: ContextState | undefined) => {
     if (previousState) {
-      if (!currentState) cleanupState(previousState)
-      else if (currentState.type === "tree") {
+      if (currentState.type === "tree") {
         if (previousState.type === "tree") {
           target.replaceChild(currentState.node, previousState.node)
-          cleanupTreeState(previousState)
+          cleanTreeState(previousState)
         } else {
-          previousState.stop()
+          if (previousState.type === "active") previousState.stop()
           target.appendChild(currentState.node)
         }
       } else {
         if (previousState.type === "tree")
-          cleanupState(previousState)
-        else previousState.stop()
-        currentState.start()
+          cleanState(previousState)
+        else if (previousState.type === "active")
+          previousState.stop()
+        if (currentState.type === "active")
+          currentState.start()
+        else { // future
+          current[currentState.index] = createDOMTextState("")
+          currentState.promise.then(state => current[currentState.index] = state)
+        }
       }
-    } else if (currentState) switch (currentState.type) {
+    } else switch (currentState.type) {
       case "tree": target.appendChild(currentState.node); break;
-      case "live": currentState.start(); break;
-    } else throw `illegal state: both sides of state diff are undefined`
+      case "active": currentState.start(); break;
+      case "future": {
+        const state = createDOMTextState()
+        current[currentState.index] = state
+        target.appendChild(state.node)
+        currentState.promise.then(state => current[currentState.index] = state)
+        break;
+      }
+    }
   }
 
-  const cleanupState = (node: ContextState, from: Node = target) => {
+  const cleanState = (node: ContextState, from: Node = target) => {
     if (node.type === "tree") {
       from.removeChild(node.node)
-      cleanupTreeState(node)
-    }
-    else node.stop()
+      cleanTreeState(node)
+    } else if (node.type === "active") node.stop()
   }
 
-  const cleanupTreeState = (node: TreeState) => {
-    node.children.forEach(child => cleanupState(child, node.node))
+  const cleanTreeState = (node: DOMNodeState) => {
+    node.children.forEach(child => cleanState(child, node.node))
   }
 
-  const createTreeState = ({ name, props, children }: JSX.NodeElement): TreeState => {
+  const createDOMTextState = (data?: string | number | boolean): DOMNodeState => ({
+    type: "tree",
+    node: document.createTextNode(data ? `${data}` : ""),
+    children: []
+  })
+
+  const createDOMNodeState = (data: JSX.NodeElement): DOMNodeState => {
+    const { name, props, children } = data;
     const node = document.createElement(name)
     if (props) Object.keys(props)
       .forEach(name => {
@@ -100,38 +116,50 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
     }
   }
 
-  const createLiveState = (iterator: JSX.ActiveElement): LiveState => {
-    let live = true;
-    return { 
-      type: "live",
+  const createActiveState = (iterator: JSX.ActiveElement): ActiveState => {
+    let live = false;
+    return {
+      type: "active",
       start: async () => {
+        if (live) return
         let context: Context = [];
         let result = await iterator.next()
+        live = true
         while (live && !result.done) {
           context = render(target, result.value, context)
           result = await iterator.next()
         }
-        context.forEach(node => cleanupState(node))
+        context.forEach(node => cleanState(node))
       },
       stop: () => live = false
     }
   }
 
+  const createFutureState = (promise: Promise<Awaited<JSX.Element>>, index: number): FutureState => ({
+    type: "future",
+    promise: promise.then(element => render(target, element, [current[index]])[0]),
+    index
+  })
+
   children && (Array.isArray(children) ? children : [children])
-    .filter(jsxElement => jsxElement !== null)
     .forEach((jsxElement, index) => {
-      if (isTextElement(jsxElement)) {
-        current[index] = { type: "tree", node: document.createTextNode(`${jsxElement}`), children: [] }
-      } else if (isDOMElement(jsxElement)) {
-        current[index] = createTreeState(jsxElement)
-      } else if (isActiveElement(jsxElement)) {
-        current[index] = createLiveState(jsxElement)
-      } else throw `unsupported element ${typeof jsxElement}: ${JSON.stringify(jsxElement)}`
+      if (isTextElement(jsxElement))
+        current[index] = createDOMTextState(jsxElement)
+      else if (isDOMElement(jsxElement))
+        current[index] = createDOMNodeState(jsxElement)
+      else if (isActiveElement(jsxElement))
+        current[index] = createActiveState(jsxElement)
+      else if (isFutureElement(jsxElement))
+        current[index] = createFutureState(jsxElement, index)
+      else if (jsxElement === null)
+        current[index] = createDOMTextState("💩") // leave some poo :)
+      else throw `unsupported element ${typeof jsxElement}: ${JSON.stringify(jsxElement)}`
     })
 
-  const count = Math.max(current.length, previous.length)
-  for (let index = 0; index < count; index++)
+  for (let index = 0; index < current.length; index++)
     mergeState(current[index], previous[index])
+  for (let index = current.length; index < previous.length; index++)
+    cleanState(previous[index])
 
   return current
 

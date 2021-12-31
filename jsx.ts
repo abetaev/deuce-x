@@ -6,7 +6,8 @@ declare namespace JSX {
 
 	type Children = undefined | Element | Element[]
 
-	type Element = ActiveElement | IntrinsicElement | TextElement | null
+	type MaybePromise<T> = T | Promise<T>
+	type Element = MaybePromise<ActiveElement | IntrinsicElement | TextElement | null>
 
 	type ActiveElement = AsyncIterator<Element, Element | void, undefined>
 	type NodeElement = {
