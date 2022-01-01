@@ -1,0 +1,11 @@
+ul li {
+  list-style-type: none;
+}
+
+ul li.todo::before {
+  content: "⬜";
+}
+
+ul li.done::before {
+  content: "✅";
+}
