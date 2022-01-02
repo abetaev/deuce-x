@@ -6,13 +6,15 @@ import type { PipeOutput } from './use.ts'
 
 type Item = { done: boolean, text: string }
 
-type TODOItemProps = { onDelete: () => void, onToggle: () => void, item: Item }
-const TODOItem = ({ onDelete, onToggle, item }: TODOItemProps) => {
-  console.log(item)
-  return (
-    <li class={item.done ? "done" : "todo"} onClick={onToggle}>{item.text}<button onClick={onDelete}>delete</button></li>
-  )
-}
+type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (text: string) => void, item: Item }
+const TODOItem = ({ onDelete, onToggle, onChange, item }: TODOItemProps) => (
+  <li>
+    <span onClick={onToggle}>{item.done ? '✅' : '⬜'}</span>
+    <span>{item.text}</span>
+    <button onClick={onDelete}>delete</button>
+  </li>
+)
+
 
 type TODOListProps = { inputSource: PipeOutput<string> }
 async function* TODOList({ inputSource }: TODOListProps) {
@@ -25,10 +27,14 @@ async function* TODOList({ inputSource }: TODOListProps) {
 
   const List = () => (
     <ul>
-      {items.map((item, id) => <TODOItem onDelete={() => remove(id)} item={item} onToggle={() => toggle(id)}/>)}
+      {items.map((item, id) => <TODOItem
+        onDelete={() => remove(id)} item={item}
+        onToggle={() => toggle(id)}
+        onChange={(text) => console.log(text)}
+      />)}
     </ul>
   )
-  yield <List/>
+  yield <List />
 
   for await (const message of eventSource()) {
     switch (message.type) {
@@ -36,8 +42,8 @@ async function* TODOList({ inputSource }: TODOListProps) {
       case "remove": items.splice(message.value, 1); break;
       case "toggle": items[message.value].done = !items[message.value].done; break;
     }
-    localStorage.setItem("items", JSON.stringify(items))    
-    yield <List/>
+    localStorage.setItem("items", JSON.stringify(items))
+    yield <List />
   }
 
 }
@@ -61,5 +67,5 @@ const TODO = () => {
 
 render(
   document.body,
-  <TODO />,
+  <TODO />
 )
