@@ -16,9 +16,8 @@ const TODOItem = ({ onDelete, onToggle, onChange, item }: TODOItemProps) => (
 )
 
 
-type TODOListProps = { inputSource: PipeOutput<string> }
-async function* TODOList({ inputSource }: TODOListProps) {
-  const items: Item[] = JSON.parse(localStorage.getItem("items") || "[]")
+type TODOListProps = { items: Item[], onChange: (items: Item[]) => void, inputSource: PipeOutput<string> }
+async function* TODOList({ items, onChange, inputSource }: TODOListProps) {
 
   const [remove, removeSource] = usePipe<number>()
   const [toggle, toggleSource] = usePipe<number>()
@@ -42,17 +41,19 @@ async function* TODOList({ inputSource }: TODOListProps) {
       case "remove": items.splice(message.value, 1); break;
       case "toggle": items[message.value].done = !items[message.value].done; break;
     }
-    localStorage.setItem("items", JSON.stringify(items))
+    onChange(items)
     yield <List />
   }
 
 }
 
-const TODO = () => {
+type TODOProps = { source: string }
+const TODO = ({ source }: TODOProps) => {
+  const items: Item[] = JSON.parse(localStorage.getItem(source) || "[]")
   const [addMessage, messagePipe] = usePipe<string>()
   return (
     <main>
-      <TODOList inputSource={messagePipe} />
+      <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))}/>
       <input type="text" onKeyDown={({ key, target }) => {
         if (key === "Enter") {
           const input = target as HTMLInputElement
@@ -65,7 +66,16 @@ const TODO = () => {
   )
 }
 
+const Load = async ({ child }: { child: JSX.Element }) => {
+  await new Promise(resolve => setTimeout(resolve, Math.random() * 1000))
+  return child
+}
+
 render(
   document.body,
-  <TODO />
+  [
+    <Load child={<TODO source="todo1" />} />,
+    <hr/>,
+    <Load child={<TODO source="todo2" />} />
+  ]
 )
