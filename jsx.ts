@@ -28,7 +28,7 @@ export const createElement = <TProps extends JSX.Props>(component: Component<TPr
 
 }
 
-type ActiveState = { type: "active", start: () => void, stop: () => void }
+type ActiveState = { type: "active", start: () => void, stop: () => void, substate: DOMNodeState }
 type FutureState = { type: "future", promise: Promise<ContextState>, index: number }
 type DOMNodeState = { type: "tree", node: Node, children: ContextState[] }
 type ContextState = DOMNodeState | ActiveState | FutureState
@@ -49,31 +49,84 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
 
   const current: Context = []
 
+  // function getNode(state: ContextState) {
+  //   switch (state.type) {
+  //     case "active":
+  //       return state.substate.node
+  //     case "tree":
+  //       return state.node
+  //     case "future":
+  //       return undefined
+  //   }
+  // }
+
+  // TODO: refactor, make complrehendable
   const mergeState = (currentState: ContextState, previousState: ContextState | undefined) => {
     if (previousState) {
-      if (currentState.type === "tree") {
-        if (previousState.type === "tree") {
-          target.replaceChild(currentState.node, previousState.node)
-          cleanTreeState(previousState)
-        } else {
-          if (previousState.type === "active") previousState.stop()
-          target.appendChild(currentState.node)
-        }
-      } else {
-        if (previousState.type === "tree")
-          cleanState(previousState)
-        else if (previousState.type === "active")
-          previousState.stop()
-        if (currentState.type === "active")
-          currentState.start()
-        else { // future
-          current[currentState.index] = createDOMTextState("💩")
+
+      // const replacement = getNode(currentState) || document.createTextNode("💩")
+      // const placeholder = getNode(previousState)
+
+      // if (placeholder) target.replaceChild(replacement, placeholder)
+      // else target.appendChild(replacement)
+
+      // cleanState(previousState)
+
+      switch (currentState.type) {
+
+        case "tree":
+          if (previousState.type === "tree") {
+            target.replaceChild(currentState.node, previousState.node)
+            cleanTreeState(previousState)
+          } else if (previousState.type === "active") {
+            previousState.stop()
+            target.replaceChild(currentState.node, previousState.substate.node)
+          } else {
+            console.warn('future state was not resolved', previousState)
+          }
+          break;
+
+        case "active":
+
+          if (previousState.type === "tree") {
+            target.replaceChild(currentState.substate.node, previousState.node)
+            cleanTreeState(previousState)
+          } else if (previousState.type === "active") {
+            previousState.stop()
+            target.replaceChild(currentState.substate.node, previousState.substate.node)
+          } else {
+            console.warn('future state was not resolved', previousState)
+          }
+
+          break;
+
+        case "future": {
+
+          const state = createDOMTextState("💩")
+          current[currentState.index] = state
+
+          if (previousState.type === "tree") {
+            target.replaceChild(state.node, previousState.node)
+            cleanTreeState(previousState)
+          } else if (previousState.type === "active") {
+            target.replaceChild(state.node, previousState.substate.node)
+            cleanState(previousState)
+          } else {
+            console.warn('future state was not resolved', previousState)
+          }
+
           currentState.promise.then(state => current[currentState.index] = state)
+          break
         }
+
       }
+
     } else switch (currentState.type) {
       case "tree": target.appendChild(currentState.node); break;
-      case "active": currentState.start(); break;
+      case "active":
+        target.appendChild(currentState.substate.node)
+        currentState.start();
+        break;
       case "future": {
         const state = createDOMTextState("💩")
         current[currentState.index] = state
@@ -84,11 +137,12 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
     }
   }
 
-  const cleanState = (node: ContextState, from: Node = target) => {
-    if (node.type === "tree") {
-      from.removeChild(node.node)
-      cleanTreeState(node)
-    } else if (node.type === "active") node.stop()
+  const cleanState = (state: ContextState, from: Node = target) => {
+    if (state.type === "tree") {
+      from.removeChild(state.node)
+      cleanTreeState(state)
+    } else if (state.type === "active") state.stop()
+    else console.warn('future state was not resolved', state)
   }
 
   const cleanTreeState = (node: DOMNodeState) => {
@@ -118,11 +172,12 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
 
   const createActiveState = (iterator: JSX.ActiveElement): ActiveState => {
     let live = false;
+    const substate = createDOMTextState("💩")
     return {
       type: "active",
       start: async () => {
         if (live) return
-        let context: Context = [];
+        let context: Context = [substate];
         let result = await iterator.next()
         live = true
         while (live && !result.done) {
@@ -131,7 +186,8 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
         }
         context.forEach(node => cleanState(node))
       },
-      stop: () => live = false
+      stop: () => live = false,
+      substate
     }
   }
 
