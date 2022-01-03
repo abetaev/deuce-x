@@ -35,43 +35,7 @@ type ContextState = StaticState | ActiveState | FutureState
 type Context<T = ContextState> = T[]
 export const render = (target: Element, children: JSX.Children, previous: Context<ContextState> = []): Context => {
 
-  const isTextElement = (element: JSX.Element): element is JSX.TextElement =>
-    typeof element === "string" || typeof element === "boolean" || typeof element === "number" || typeof element === "undefined"
-
-  const isNodeElement = (element: JSX.Element): element is JSX.StaticElement =>
-    element !== null && typeof element === "object" && "name" in element
-
-  const isIteratorElement = (element: JSX.Element): element is JSX.ActiveElement =>
-    element !== null && typeof element === "object" && "next" in element
-
-  const isPromiseElement = (element: JSX.Element): element is Promise<Awaited<JSX.Element>> =>
-    element !== null && typeof element === "object" && "then" in element
-
   const current: Context = []
-
-  function getNode(state?: ContextState): Node | undefined {
-    if (state) switch (state.type) {
-      case "active":
-        return state.substate.node
-      case "future":
-        return getNode(state.substate())
-      case "static":
-        return state.node
-    }
-  }
-
-  const mergeState = (currentState: ContextState, previousState?: ContextState) => {
-
-    const replacement = getNode(currentState) || document.createTextNode("💩")
-    const placeholder = getNode(previousState)
-
-    if (placeholder) target.replaceChild(replacement, placeholder)
-    else target.appendChild(replacement)
-
-    if (currentState.type === "active") currentState.start()
-    previousState && cleanState(previousState)
-
-  }
 
   const cleanState = (state: ContextState) => {
     if (state.type === "static") state.children.forEach(child => cleanState(child))
@@ -114,7 +78,6 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
           context = render(target, result.value, context)
           result = await iterator.next()
         }
-        console.log('live', live)
         context.forEach(node => cleanState(node))
       },
       stop: () => live = false,
@@ -131,6 +94,18 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
     })
   }
 
+  const isTextElement = (element: JSX.Element): element is JSX.TextElement =>
+    typeof element === "string" || typeof element === "boolean" || typeof element === "number" || typeof element === "undefined"
+
+  const isNodeElement = (element: JSX.Element): element is JSX.StaticElement =>
+    element !== null && typeof element === "object" && "name" in element
+
+  const isIteratorElement = (element: JSX.Element): element is JSX.ActiveElement =>
+    element !== null && typeof element === "object" && "next" in element
+
+  const isPromiseElement = (element: JSX.Element): element is Promise<Awaited<JSX.Element>> =>
+    element !== null && typeof element === "object" && "then" in element
+
   children && (Array.isArray(children) ? children : [children])
     .forEach((jsxElement, index) => {
       if (isTextElement(jsxElement))
@@ -145,6 +120,30 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
         current[index] = createStaticTextState("💩") // leave some poo :)
       else throw `unsupported element ${typeof jsxElement}: ${JSON.stringify(jsxElement)}`
     })
+
+  const mergeState = (currentState: ContextState, previousState?: ContextState) => {
+
+    function getNode(state?: ContextState): Node | undefined {
+      if (state) switch (state.type) {
+        case "active":
+          return state.substate.node
+        case "future":
+          return getNode(state.substate())
+        case "static":
+          return state.node
+      }
+    }
+
+    const replacement = getNode(currentState) || document.createTextNode("💩")
+    const placeholder = getNode(previousState)
+
+    if (placeholder) target.replaceChild(replacement, placeholder)
+    else target.appendChild(replacement)
+
+    if (currentState.type === "active") currentState.start()
+    previousState && cleanState(previousState)
+
+  }
 
   for (let index = 0; index < current.length; index++)
     mergeState(current[index], previous[index])

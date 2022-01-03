@@ -1,19 +1,30 @@
 /** @jsx createElement */
 
 import { createElement, render } from './jsx.ts'
-import { usePipe, useMux } from './use.ts'
+import { useWait, usePipe, useMux } from './use.ts'
 import type { PipeOutput } from './use.ts'
 
 type Item = { done: boolean, text: string }
 
 type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (text: string) => void, item: Item }
-const TODOItem = ({ onDelete, onToggle, onChange, item }: TODOItemProps) => (
-  <li>
-    <span onClick={onToggle}>{item.done ? '✅' : '⬜'}</span>
-    <span>{item.text}</span>
-    <button onClick={onDelete}>delete</button>
-  </li>
-)
+async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) {
+  let editing = false
+  const [pause, update] = useWait()
+  while (true) {
+    yield (
+      <li>
+        <span onClick={onToggle}>{item.done ? '✅' : '⬜'}</span>
+        {
+          editing
+            ? <span><input /><button onClick={({target}) => onChange((target as HTMLInputElement).value)}>save</button><button onClick={() => {editing = false; update()}}>cancel</button></span>
+            : <span onClick={() => {editing = true; update()}}>{item.text}</span>
+        }
+        <button onClick={onDelete}>delete</button>
+      </li>
+    )
+    await pause()
+  }
+}
 
 
 type TODOListProps = { items: Item[], onChange: (items: Item[]) => void, inputSource: PipeOutput<string> }
@@ -53,7 +64,7 @@ const TODO = ({ source }: TODOProps) => {
   const [addMessage, messagePipe] = usePipe<string>()
   return (
     <main>
-      <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))}/>
+      <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))} />
       <input type="text" onKeyDown={({ key, target }) => {
         if (key === "Enter") {
           const input = target as HTMLInputElement
@@ -75,7 +86,7 @@ render(
   document.body,
   [
     <Load child={<TODO source="todo1" />} />,
-    <hr/>,
+    <hr />,
     <Load child={<TODO source="todo2" />} />
   ]
 )
