@@ -13,7 +13,7 @@ function useData<TEvent>(): [DataInput<TEvent>, DataOutput<TEvent>] {
 
 type WaitLock = () => Promise<void>
 type WaitOpen = () => void
-function useWait(): [WaitLock, WaitOpen] {
+export function useWait(): [WaitLock, WaitOpen] {
   let release = () => { }
   return [
     () => new Promise(resolve => release = resolve),
