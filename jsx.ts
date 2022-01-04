@@ -1,4 +1,5 @@
-import type { } from './jsx.d.ts'
+/// <reference lib="DOM" />
+/// <reference path="./jsx.d.ts" />
 
 export type ChildrenProps = { children: JSX.Children }
 
@@ -54,8 +55,12 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
     const node = document.createElement(name)
     if (props) Object.keys(props)
       .forEach(name => {
-        if (name.match(/on[A-Z].*/)) node.addEventListener(name.substring(2).toLowerCase(), props[name as keyof JSX.Props])
-        else node.setAttribute(name.toLowerCase(), `${props[name as keyof JSX.Props]}`)
+        if (name === "socket")
+          props[name as keyof JSX.Props](node)
+        else if (name.match(/on[A-Z].*/))
+          node.addEventListener(name.substring(2).toLowerCase(), props[name as keyof JSX.Props])
+        else
+          node.setAttribute(name.toLowerCase(), `${props[name as keyof JSX.Props]}`)
       })
     return {
       type: "static",

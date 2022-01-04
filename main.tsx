@@ -1,7 +1,7 @@
 /** @jsx createElement */
 
 import { createElement, render } from './jsx.ts'
-import { useWait, usePipe, useMux } from './use.ts'
+import { useLink, useWait, usePipe, useMux } from './use.ts'
 import type { PipeOutput } from './use.ts'
 
 type Item = { done: boolean, text: string }
@@ -9,15 +9,36 @@ type Item = { done: boolean, text: string }
 type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (text: string) => void, item: Item }
 async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) {
   let editing = false
+  const View = () => <span onClick={() => { editing = true; update() }}>{item.text}</span>
+  const Edit = () => {
+    const [socket, plug] = useLink<HTMLInputElement>()
+    return (
+      <span>
+        <input value={item.text} socket={socket} />
+        <button onClick={async () => {
+          const input = await plug
+          const { value } = input
+          console.log(value)
+          onChange(value)
+          toggleEdit()
+        }}>save</button>
+        <button onClick={toggleEdit}>cancel</button>
+      </span>
+    )
+  }
   const [pause, update] = useWait()
+  function toggleEdit() {
+    editing = !editing
+    update()
+  }
   while (true) {
     yield (
       <li>
         <span onClick={onToggle}>{item.done ? '✅' : '⬜'}</span>
         {
           editing
-            ? <span><input /><button onClick={({target}) => onChange((target as HTMLInputElement).value)}>save</button><button onClick={() => {editing = false; update()}}>cancel</button></span>
-            : <span onClick={() => {editing = true; update()}}>{item.text}</span>
+            ? <Edit />
+            : <View />
         }
         <button onClick={onDelete}>delete</button>
       </li>
@@ -40,7 +61,7 @@ async function* TODOList({ items, onChange, inputSource }: TODOListProps) {
       {items.map((item, id) => <TODOItem
         onDelete={() => remove(id)} item={item}
         onToggle={() => toggle(id)}
-        onChange={(text) => console.log(text)}
+        onChange={(text) => { items[id].text = text }}
       />)}
     </ul>
   )

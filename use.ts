@@ -1,7 +1,7 @@
-type DataOutput<TEvent> = (handler: DataInput<TEvent>) => () => void
-type DataInput<TEvent> = (event: TEvent) => void
-function useData<TEvent>(): [DataInput<TEvent>, DataOutput<TEvent>] {
-  let subscriptions: DataInput<TEvent>[] = []
+type EventOutput<T> = (handler: EventInput<T>) => () => void
+type EventInput<T> = (event: T) => void
+export function useEvent<T>(): [EventInput<T>, EventOutput<T>] {
+  let subscriptions: EventInput<T>[] = []
   return [
     (event) => subscriptions.forEach(handle => handle(event)),
     (handler) => {
@@ -24,7 +24,7 @@ export function useWait(): [WaitLock, WaitOpen] {
 export type PipeOutput<T> = () => AsyncIterable<T>
 export type PipeInput<T> = (event: T) => void
 export function usePipe<T>(): [PipeInput<T>, PipeOutput<T>] {
-  const [send, onReceive] = useData<T>()
+  const [send, onReceive] = useEvent<T>()
   return [
     send,
     async function* () {
@@ -55,3 +55,10 @@ export function useMux<T>(input: MuxSource<T>): MuxTarget<T> {
   return target
 }
 
+export type Plug<T extends HTMLElement> = Promise<T>
+export function useLink<T extends HTMLElement>():[JSX.Socket<T>, Plug<T>] {
+  let socket: JSX.Socket<T> | undefined = undefined
+  const plug = new Promise<T>(resolve => socket = resolve)
+  if (!socket) throw 'unable to create link'
+  return [socket, plug]
+}

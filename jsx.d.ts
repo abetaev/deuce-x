@@ -156,8 +156,11 @@ declare namespace JSX {
 		>]?: string | number | null | undefined;
 	};
 
+  type Socket<T extends EventTarget> = (element: T) => void
+
   interface HTMLAttributes<RefType extends EventTarget = EventTarget>
 		extends DOMAttributes<RefType>, ElementChildrenAttribute {
+		socket?: Socket<RefType>
 		// Standard HTML Attributes
 		accept?: string;
 		acceptCharset?: string;
