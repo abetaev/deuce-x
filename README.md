@@ -23,7 +23,7 @@ supports 3 types of elements:
 
 does not support:
 
- * fragments (unprobably)
+ * fragments (unlikely)
  
  * nodejs (maybe)
  
@@ -36,7 +36,7 @@ TODO
 ====
 
  * finish TODO demo
- * process CSS properties
+ * support SVG namespace
  * generate jsx type definitions from standard
  * write real docs
  * write at least some tests

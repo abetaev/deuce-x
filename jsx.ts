@@ -53,14 +53,27 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
   const createStaticNodeState = (data: JSX.NodeElement): StaticState => {
     const { name, props, children } = data;
     const node = document.createElement(name)
+    
+    type StyleObject = Record<string, string | number | boolean>
+    function transformStyle(input: StyleObject) {
+      return Object.keys(input)
+        .map(key => `${kebabize(key)}: ${input[key]}`)
+        .join(';')
+    } 
+
     if (props) Object.keys(props)
-      .forEach(name => {
-        if (name === "socket")
-          props[name as keyof JSX.Props](node)
-        else if (name.match(/on[A-Z].*/))
-          node.addEventListener(name.substring(2).toLowerCase(), props[name as keyof JSX.Props])
+      .map(name => [name, props[name as keyof JSX.Props]] as [string, unknown])
+      .forEach(([name, value]) => {
+        if (typeof value === "function" && name === "socket")
+          (value as JSX.Socket<EventTarget>)(node)
+        else if (Array.isArray(value) && name === "class")
+          node.setAttribute("class", value.join(' '))
+        else if (typeof value ==="object" && value && name === "style")
+          node.setAttribute("style", transformStyle(value as StyleObject))
+        else if (typeof value === "function" && name.match(/on[A-Z].*/))
+          node.addEventListener(name.substring(2).toLowerCase(), value as EventListenerOrEventListenerObject)
         else
-          node.setAttribute(name.toLowerCase(), `${props[name as keyof JSX.Props]}`)
+          node.setAttribute(name.toLowerCase(), `${value}`)
       })
     return {
       type: "static",
@@ -157,4 +170,8 @@ export const render = (target: Element, children: JSX.Children, previous: Contex
 
   return current
 
+}
+
+function kebabize(input: string) {
+  return input.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 }
