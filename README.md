@@ -21,16 +21,26 @@ supports 3 types of elements:
 
     these elements are like static, but require asynchronous operations to get data
 
-does not support fragments, nodejs and other shit. only quality poo here.
+does not support:
+
+ * fragments (unprobably)
+ 
+ * nodejs (maybe)
+ 
+ * and other SSR shit (never!)
+ 
+only quality 💩 here!
 
 
 TODO
 ====
 
  * finish TODO demo
+ * process CSS properties
+ * generate jsx type definitions from standard
  * write real docs
  * write at least some tests
  * check for memory leaks
  * check for performance
  * structure project properly
- * and ⬜ of course
+ * and 💩 of course

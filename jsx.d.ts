@@ -1,4 +1,4 @@
-type DOMElement = Element
+type Awaitable<T> = T | Promise<T>
 
 declare namespace JSX {
 
@@ -6,8 +6,7 @@ declare namespace JSX {
 
 	type Children = undefined | Element | Element[]
 
-	type MaybePromise<T> = T | Promise<T>
-	type Element = MaybePromise<ActiveElement | StaticElement | null>
+	type Element = Awaitable<ActiveElement | StaticElement | null>
 
 	type ActiveElement = AsyncIterator<Element, Element | void, undefined>
 	type NodeElement = {
