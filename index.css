@@ -1,11 +1,139 @@
-ul {
-  padding: 0;
+/* TODO: use SASS? */
+div.todo {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
 }
 
-ul li {
+div.todo > * {
+  display: flex;
+  position: fixed;
+}
+
+div.todo main {
+  right: 0px;
+  left: 0px;
+  top: 70px;
+  bottom: 70px;
+}
+
+div.todo header {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+div.todo footer {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+}
+
+div.todo > * {
+  padding: 5px;
+}
+
+div.todo * input {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 50rem;
+  flex-grow: 1;
+  font-size: 30px;
+  background-color: transparent;
+  padding-left: 20px;
+}
+
+div.todo * button {
+  border-width: 0px;
+  border-style: solid;
+  border-radius: 50rem;
+  width: 60px;
+  height: 60px;
+  opacity: 60%;
+  transition: 0.5s;
+}
+
+div.todo * button:hover {
+  opacity: 100%;
+  transition: 0.5s;
+}
+
+div.todo main ul {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 5px;
+}
+
+div.todo main ul li {
+  margin-bottom: 5px;
   list-style-type: none;
+  display: flex;
+  align-items: center;
+  border-radius: 50rem;
+  background-color: lightslategray;
+  transition: 0.5s;
 }
 
-ul span {
-  cursor: pointer;
+div.todo main ul li:hover {
+  background-color: cadetblue;
+  transition: 0.5s;
 }
+
+div.todo main ul li > span {
+  display: flex;
+  flex-direction: row;
+}
+
+div.todo main ul li > span {
+  flex-grow: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 30px;
+  padding-left: 5px;
+  height: 100%;
+  align-items: center;
+}
+
+div.todo * div.group {
+  display: flex;
+  flex-grow: 1;
+}
+
+div.todo * div.group > * {
+  border-radius: 0;
+}
+
+div.todo * div.group :first-child {
+  border-top-left-radius: 50rem;
+  border-bottom-left-radius: 50rem;
+}
+
+div.todo * div.group :last-child {
+  border-top-right-radius: 50rem;
+  border-bottom-right-radius: 50rem;
+}
+
+button {
+  background: none;
+}
+
+button.primary {
+  background-color: lightskyblue;
+}
+
+button.secondary {
+  background-color: gray;
+}
+
+button.danger {
+  background-color: crimson;
+}
+

@@ -4,25 +4,44 @@ import { createElement, render } from './jsx.ts'
 import { useLink, useWait, usePipe, useMux } from './use.ts'
 import type { PipeOutput } from './use.ts'
 
+type GroupProps = { children: JSX.Children }
+const Group = ({ children }: GroupProps) => <div class="group">{children}</div>
+
+type IconButtonProps = { icon: string } & JSX.HTMLAttributes<HTMLButtonElement>
+const IconButton = ({ icon, class: className, ...rest }: IconButtonProps) => (
+  <button class={["material-icons", ...Array.isArray(className) ? className : className ? [className] : []]} {...rest}>
+    {icon}
+  </button>
+)
+
 type Item = { done: boolean, text: string }
 
 type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (text: string) => void, item: Item }
 async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) {
   let editing = false
+
   const View = () => <span onClick={() => { editing = true; update() }}>{item.text}</span>
   const Edit = () => {
     const [socket, plug] = useLink<HTMLInputElement>()
+    async function save() {
+      const input = await plug
+      const { value } = input
+      console.log(value)
+      onChange(value)
+      toggleEdit()
+    }
     return (
       <span>
-        <input value={item.text} socket={socket} />
-        <button onClick={async () => {
-          const input = await plug
-          const { value } = input
-          console.log(value)
-          onChange(value)
-          toggleEdit()
-        }}>save</button>
-        <button onClick={toggleEdit}>cancel</button>
+        <Group>
+          <input value={item.text} socket={socket} onKeyDown={({ key }) => {
+            switch (key) {
+              case "Enter": save(); break;
+              case "Escape": toggleEdit(); break;
+            }
+          }} />
+          <IconButton icon="save" class="primary" onClick={save} />
+          <IconButton icon="clear" class="secondary" onClick={toggleEdit} />
+        </Group>
       </span>
     )
   }
@@ -34,13 +53,13 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
   while (true) {
     yield (
       <li>
-        <span onClick={onToggle}>{item.done ? '✅' : '⬜'}</span>
+        <IconButton icon={item.done ? 'check_box' : 'check_box_outline_blank'} onClick={onToggle} />
         {
           editing
             ? <Edit />
             : <View />
         }
-        <button onClick={onDelete}>delete</button>
+        <IconButton icon="delete" class="danger" onClick={onDelete} />
       </li>
     )
     await pause()
@@ -83,18 +102,29 @@ type TODOProps = { source: string }
 const TODO = ({ source }: TODOProps) => {
   const items: Item[] = JSON.parse(localStorage.getItem(source) || "[]")
   const [addMessage, messagePipe] = usePipe<string>()
+  const [socket, plug] = useLink<HTMLInputElement>()
+
+  async function create() {
+    const input = await plug
+    const value = input.value
+    input.value = ""
+    addMessage(value)
+  }
+
   return (
-    <main>
-      <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))} />
-      <input type="text" onKeyDown={({ key, target }) => {
-        if (key === "Enter") {
-          const input = target as HTMLInputElement
-          const value = input.value
-          input.value = ""
-          addMessage(value)
-        }
-      }} />
-    </main>
+    <div class="todo">
+      <header>deuce-x TODO demo</header>
+      <main>
+        <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))} />
+      </main>
+      <footer>
+        <Group>
+          <IconButton icon="filter_list" onClick={() => alert("not implemented")} class="secondary"/>
+          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} />
+          <IconButton icon="add" class="primary" onClick={create} />
+        </Group>
+      </footer>
+    </div>
   )
 }
 
@@ -105,9 +135,5 @@ const Load = async ({ child }: { child: JSX.Element }) => {
 
 render(
   document.body,
-  [
-    <Load child={<TODO source="todo1" />} />,
-    <hr />,
-    <Load child={<TODO source="todo2" />} />
-  ]
+  <Load child={<TODO source="todo" />} />
 )

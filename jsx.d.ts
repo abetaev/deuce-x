@@ -2,7 +2,7 @@ type Awaitable<T> = T | Promise<T>
 
 declare namespace JSX {
 
-	type Props = ElementChildrenAttribute & HTMLAttributes & DOMAttributes<EventTarget>
+	type Props = ElementChildrenAttribute & HTMLAttributes<EventTarget>
 
 	type Children = undefined | Element | Element[]
 
@@ -18,15 +18,15 @@ declare namespace JSX {
 	type StaticElement = TextElement | NodeElement
 
 	interface ElementChildrenAttribute {
-    children?: Children;
-  }
+		children?: Children;
+	}
 
-  type IntrinsicElements = HTMLElements & SVGElements
+	type IntrinsicElements = HTMLElements & SVGElements
 
 	// configuration below is copy paste from preact code base
 	// TODO: generate it based on HTML/DOM specs instead
 
-  type HTMLElements = {
+	type HTMLElements = {
 		a: HTMLAttributes<HTMLAnchorElement>;
 		abbr: HTMLAttributes<HTMLElement>;
 		address: HTMLAttributes<HTMLElement>;
@@ -142,7 +142,7 @@ declare namespace JSX {
 		var: HTMLAttributes<HTMLElement>;
 		video: HTMLAttributes<HTMLVideoElement>;
 		wbr: HTMLAttributes<HTMLElement>;
-  }
+	}
 
 	type CSSProperties = {
 		[key in keyof Omit<
@@ -155,9 +155,9 @@ declare namespace JSX {
 		>]?: string | number | null | undefined;
 	};
 
-  type Socket<T extends EventTarget> = (element: T) => void
+	type Socket<T extends EventTarget> = (element: T) => void
 
-  interface HTMLAttributes<RefType extends EventTarget = EventTarget>
+	interface HTMLAttributes<RefType extends EventTarget>
 		extends DOMAttributes<RefType>, ElementChildrenAttribute {
 		socket?: Socket<RefType>
 		// Standard HTML Attributes
@@ -185,8 +185,7 @@ declare namespace JSX {
 		challenge?: string;
 		checked?: boolean;
 		cite?: string;
-		class?: string;
-		className?: string;
+		class?: string | string[];
 		cols?: number;
 		colSpan?: number;
 		content?: string;
@@ -203,18 +202,18 @@ declare namespace JSX {
 		dir?: 'auto' | 'rtl' | 'ltr';
 		disabled?: boolean;
 		disableRemotePlayback?: boolean;
-		download?: any;
+		download?: boolean;
 		decoding?: 'sync' | 'async' | 'auto';
 		draggable?: boolean;
 		encType?: string;
 		enterkeyhint?:
-			| 'enter'
-			| 'done'
-			| 'go'
-			| 'next'
-			| 'previous'
-			| 'search'
-			| 'send';
+		| 'enter'
+		| 'done'
+		| 'go'
+		| 'next'
+		| 'previous'
+		| 'search'
+		| 'send';
 		form?: string;
 		formAction?: string;
 		formEncType?: string;
@@ -273,14 +272,14 @@ declare namespace JSX {
 		readonly?: boolean;
 		readOnly?: boolean;
 		referrerpolicy?:
-			| 'no-referrer'
-			| 'no-referrer-when-downgrade'
-			| 'origin'
-			| 'origin-when-cross-origin'
-			| 'same-origin'
-			| 'strict-origin'
-			| 'strict-origin-when-cross-origin'
-			| 'unsafe-url';
+		| 'no-referrer'
+		| 'no-referrer-when-downgrade'
+		| 'origin'
+		| 'origin-when-cross-origin'
+		| 'same-origin'
+		| 'strict-origin'
+		| 'strict-origin-when-cross-origin'
+		| 'unsafe-url';
 		rel?: string;
 		required?: boolean;
 		reversed?: boolean;
@@ -322,19 +321,19 @@ declare namespace JSX {
 
 		// Non-standard Attributes
 		autocapitalize?:
-			| 'off'
-			| 'none'
-			| 'on'
-			| 'sentences'
-			| 'words'
-			| 'characters';
+		| 'off'
+		| 'none'
+		| 'on'
+		| 'sentences'
+		| 'words'
+		| 'characters';
 		autoCapitalize?:
-			| 'off'
-			| 'none'
-			| 'on'
-			| 'sentences'
-			| 'words'
-			| 'characters';
+		| 'off'
+		| 'none'
+		| 'on'
+		| 'sentences'
+		| 'words'
+		| 'characters';
 		disablePictureInPicture?: boolean;
 		results?: number;
 		translate?: 'yes' | 'no';
@@ -342,7 +341,7 @@ declare namespace JSX {
 		// RDFa Attributes
 		about?: string;
 		datatype?: string;
-		inlist?: any;
+		inlist?: boolean;
 		prefix?: string;
 		property?: string;
 		resource?: string;
@@ -563,19 +562,19 @@ declare namespace JSX {
 	type TargetedEvent<
 		Target extends EventTarget = EventTarget,
 		TypedEvent extends Event = Event
-	> = Omit<TypedEvent, 'currentTarget'> & {
-		readonly currentTarget: Target;
-	};
+		> = Omit<TypedEvent, 'currentTarget'> & {
+			readonly currentTarget: Target;
+		};
 
 	type TargetedAnimationEvent<
 		Target extends EventTarget
-	> = TargetedEvent<Target, AnimationEvent>;
+		> = TargetedEvent<Target, AnimationEvent>;
 	type TargetedClipboardEvent<
 		Target extends EventTarget
-	> = TargetedEvent<Target, ClipboardEvent>;
+		> = TargetedEvent<Target, ClipboardEvent>;
 	type TargetedCompositionEvent<
 		Target extends EventTarget
-	> = TargetedEvent<Target, CompositionEvent>;
+		> = TargetedEvent<Target, CompositionEvent>;
 	type TargetedDragEvent<Target extends EventTarget> = TargetedEvent<
 		Target,
 		DragEvent
@@ -602,7 +601,7 @@ declare namespace JSX {
 	>;
 	type TargetedTransitionEvent<
 		Target extends EventTarget
-	> = TargetedEvent<Target, TransitionEvent>;
+		> = TargetedEvent<Target, TransitionEvent>;
 	type TargetedUIEvent<Target extends EventTarget> = TargetedEvent<
 		Target,
 		UIEvent
@@ -628,7 +627,7 @@ declare namespace JSX {
 	>;
 	type CompositionEventHandler<
 		Target extends EventTarget
-	> = EventHandler<TargetedCompositionEvent<Target>>;
+		> = EventHandler<TargetedCompositionEvent<Target>>;
 	type DragEventHandler<Target extends EventTarget> = EventHandler<
 		TargetedDragEvent<Target>
 	>;
@@ -660,7 +659,7 @@ declare namespace JSX {
 		TargetedWheelEvent<Target>
 	>;
 
-  type SVGElements = {
+	type SVGElements = {
 		svg: SVGAttributes<SVGSVGElement>;
 		animate: SVGAttributes<SVGAnimateElement>;
 		circle: SVGAttributes<SVGCircleElement>;
@@ -710,7 +709,7 @@ declare namespace JSX {
 		text: SVGAttributes<SVGTextElement>;
 		tspan: SVGAttributes<SVGTSpanElement>;
 		use: SVGAttributes<SVGUseElement>;
-  }
+	}
 
 	interface SVGAttributes<Target extends EventTarget = SVGElement>
 		extends HTMLAttributes<Target> {
@@ -718,19 +717,19 @@ declare namespace JSX {
 		accumulate?: 'none' | 'sum';
 		additive?: 'replace' | 'sum';
 		alignmentBaseline?:
-			| 'auto'
-			| 'baseline'
-			| 'before-edge'
-			| 'text-before-edge'
-			| 'middle'
-			| 'central'
-			| 'after-edge'
-			| 'text-after-edge'
-			| 'ideographic'
-			| 'alphabetic'
-			| 'hanging'
-			| 'mathematical'
-			| 'inherit';
+		| 'auto'
+		| 'baseline'
+		| 'before-edge'
+		| 'text-before-edge'
+		| 'middle'
+		| 'central'
+		| 'after-edge'
+		| 'text-after-edge'
+		| 'ideographic'
+		| 'alphabetic'
+		| 'hanging'
+		| 'mathematical'
+		| 'inherit';
 		allowReorder?: 'no' | 'yes';
 		alphabetic?: number | string;
 		amplitude?: number | string;
