@@ -1,2 +1,5 @@
 /.vscode/
-/main.js
+/*.ts?
+/main
+/tsconfig.json
+/README.md
