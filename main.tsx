@@ -38,7 +38,7 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
               case "Enter": save(); break;
               case "Escape": toggleEdit(); break;
             }
-          }} />
+          }} size={1}/>
           <IconButton icon="save" class="primary" onClick={save} />
           <IconButton icon="clear" class="secondary" onClick={toggleEdit} />
         </Group>
@@ -120,7 +120,7 @@ const TODO = ({ source }: TODOProps) => {
       <footer>
         <Group>
           <IconButton icon="filter_list" onClick={() => alert("not implemented")} class="secondary"/>
-          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} />
+          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} size={1}/>
           <IconButton icon="add" class="primary" onClick={create} />
         </Group>
       </footer>

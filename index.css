@@ -17,6 +17,7 @@ div.todo main {
   left: 0px;
   top: 70px;
   bottom: 70px;
+  overflow: auto;
 }
 
 div.todo header {
@@ -48,6 +49,8 @@ div.todo * input {
   font-size: 30px;
   background-color: transparent;
   padding-left: 20px;
+  width: 100%;
+  min-width: 0px;
 }
 
 div.todo * button {
@@ -90,9 +93,6 @@ div.todo main ul li:hover {
 div.todo main ul li > span {
   display: flex;
   flex-direction: row;
-}
-
-div.todo main ul li > span {
   flex-grow: 1;
   cursor: pointer;
   white-space: nowrap;
