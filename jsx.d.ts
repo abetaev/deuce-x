@@ -4,18 +4,19 @@ declare namespace JSX {
 
 	type Props = ElementChildrenAttribute & HTMLAttributes<EventTarget>
 
-	type Children = undefined | Element | Element[]
+	type Children = Element
 
-	type Element = Awaitable<ActiveElement | StaticElement | null>
+	type Element = Awaitable<StatefulElement | StatelessElement | FragmentElement | null>
 
-	type ActiveElement = AsyncIterator<Element, Element | void, undefined>
+	type FragmentElement = Array<Element>
+	type StatefulElement = AsyncIterator<Element, Element | void, undefined>
+	type StatelessElement = TextElement | NodeElement
 	type NodeElement = {
 		name: keyof IntrinsicElements
 		props: Props
-		children: Children
+		children?: Children
 	}
 	type TextElement = string | boolean | number
-	type StaticElement = TextElement | NodeElement
 
 	interface ElementChildrenAttribute {
 		children?: Children;

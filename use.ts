@@ -55,8 +55,7 @@ export function useMux<T>(input: MuxSource<T>): MuxTarget<T> {
   return target
 }
 
-export type Plug<T extends HTMLElement> = Promise<T>
-export function useLink<T extends HTMLElement>():[JSX.Socket<T>, Plug<T>] {
+export function useLink<T extends HTMLElement>():[JSX.Socket<T>, Promise<T>] {
   let socket: JSX.Socket<T> | undefined = undefined
   const plug = new Promise<T>(resolve => socket = resolve)
   if (!socket) throw 'unable to create link'

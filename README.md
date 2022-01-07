@@ -5,6 +5,8 @@ this is opinion on how JSX should be implemented inspired by:
  1. curiosity to [crank-js](https://crank.js.org/)
  2. and hate to [react](https://reactjs.org/)
 
+demo is [here](https://abetaev.github.io/deuce-x/).
+
 supports 3 types of elements:
 
  1. static - regular elements
@@ -23,7 +25,7 @@ supports 3 types of elements:
 
 does not support:
 
- * fragments (unlikely)
+ * fragments (needed!)
  
  * nodejs (maybe)
  
@@ -35,6 +37,7 @@ only quality 💩 here!
 TODO
 ====
 
+ * support fragments
  * finish TODO demo
  * support SVG namespace
  * generate jsx type definitions from standard

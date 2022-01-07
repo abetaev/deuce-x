@@ -1,6 +1,6 @@
 /** @jsx createElement */
 
-import { createElement, render } from './jsx.ts'
+import { createElement, render, Fragment } from './jsx.ts'
 import { useLink, useWait, usePipe, useMux } from './use.ts'
 import type { PipeOutput } from './use.ts'
 
@@ -20,7 +20,7 @@ type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (te
 async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) {
   let editing = false
 
-  const View = () => <span onClick={() => { editing = true; update() }}>{item.text}</span>
+  const View = () => <span style={{flexGrow: 1, display: "flex", alignItems: "center"}} onClick={() => { editing = true; update() }}>{item.text}</span>
   const Edit = () => {
     const [socket, plug] = useLink<HTMLInputElement>()
     async function save() {
@@ -31,18 +31,16 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
       toggleEdit()
     }
     return (
-      <span>
-        <Group>
-          <input value={item.text} socket={socket} onKeyDown={({ key }) => {
-            switch (key) {
-              case "Enter": save(); break;
-              case "Escape": toggleEdit(); break;
-            }
-          }} size={1}/>
-          <IconButton icon="save" class="primary" onClick={save} />
-          <IconButton icon="clear" class="secondary" onClick={toggleEdit} />
-        </Group>
-      </span>
+      <Fragment>
+        <input value={item.text} socket={socket} onKeyDown={({ key }) => {
+          switch (key) {
+            case "Enter": save(); break;
+            case "Escape": toggleEdit(); break;
+          }
+        }} size={1} />
+        <IconButton icon="save" class="primary" onClick={save} />
+        <IconButton icon="clear" class="secondary" onClick={toggleEdit} />
+      </Fragment>
     )
   }
   const [pause, update] = useWait()
@@ -53,13 +51,15 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
   while (true) {
     yield (
       <li>
-        <IconButton icon={item.done ? 'check_box' : 'check_box_outline_blank'} onClick={onToggle} />
-        {
-          editing
-            ? <Edit />
-            : <View />
-        }
-        <IconButton icon="delete" class="danger" onClick={onDelete} />
+        <Group>
+          <IconButton icon={item.done ? 'check_box' : 'check_box_outline_blank'} onClick={onToggle} />
+          {
+            editing
+              ? <Edit />
+              : <View />
+          }
+          <IconButton icon="delete" class="danger" onClick={onDelete} />
+        </Group>
       </li>
     )
     await pause()
@@ -119,8 +119,8 @@ const TODO = ({ source }: TODOProps) => {
       </main>
       <footer>
         <Group>
-          <IconButton icon="filter_list" onClick={() => alert("not implemented")} class="secondary"/>
-          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} size={1}/>
+          <IconButton icon="filter_list" onClick={() => alert("not implemented")} class="secondary" />
+          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} size={1} />
           <IconButton icon="add" class="primary" onClick={create} />
         </Group>
       </footer>
