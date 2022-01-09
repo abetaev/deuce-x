@@ -90,7 +90,7 @@ div.todo main ul li:hover {
   transition: 0.5s;
 }
 
-div.todo main ul li > span {
+div.todo main ul li div > div {
   display: flex;
   flex-direction: row;
   flex-grow: 1;

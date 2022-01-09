@@ -1,6 +1,6 @@
 /** @jsx createElement */
 
-import { createElement, render } from './cool-stuff.ts'
+import { createElement, render } from '../jsx.ts'
 
 const Hello = () => <div>Hello</div>
 

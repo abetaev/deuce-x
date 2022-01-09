@@ -1,4 +1,6 @@
+/// <reference no-default-lib="true" />
 /// <reference lib="DOM" />
+/// <reference lib="ES2021" />
 /// <reference path="./jsx.d.ts" />
 
 import { kebabize } from './util.ts'
@@ -7,7 +9,7 @@ import { kebabize } from './util.ts'
 
 type SimpleElement = Awaited<JSX.TextElement>
 type StaticElement = Awaited<JSX.NodeElement>
-type ActiveElement = AsyncIterator<JSX.Element, JSX.Element | void>
+type ActiveElement = AsyncIterator<JSX.Element | void, JSX.Element | void>
 type FutureElement = Promise<JSX.Element>
 type PluralElement = Array<JSX.Element>
 
@@ -23,7 +25,9 @@ type SyntheticComponent<T> =
 
 type IntrinsicComponent = keyof JSX.IntrinsicElements
 
-type Component<TProps> = IntrinsicComponent | SyntheticComponent<TProps>
+type SimpleComponent = () => SimpleElement
+
+type Component<T = Record<string, unknown>> = IntrinsicComponent | SyntheticComponent<T> | SimpleComponent
 
 export const createElement = <T>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
 
@@ -36,27 +40,29 @@ export const createElement = <T>(component: Component<T>, props: T, ...children:
     children: children.length === 1 ? children[0] : children
   };
 
-  return component({ children, ...props }) as JSX.Element
+  return component({ children, ...props }) as JSX.Element // TODO: why this cast is required?
 
 }
+
+export const h = createElement
 
 // render
 
 function createSlot(value: JSX.Element): Slot {
-  if (value === null) throw 'absent elements are not supported'
+  if (value === null) return absentSlot
 
-  if (Array.isArray(value)) return new PluralSlot(value)
+  if (Array.isArray(value)) return createPluralSlot(value)
 
   if (typeof value === "object") {
-    if ("name" in value) return new StaticSlot(value)
-    if ("next" in value) return new ActiveSlot(value)
-    if ("then" in value) return new FutureSlot(value)
+    if ("name" in value) return createStaticSlot(value)
+    if ("next" in value) return createActiveSlot(value)
+    if ("then" in value) return createFutureSlot(value)
   } else if (typeof value === "string"
     || typeof value === "boolean"
     || typeof value === "number")
-    return new SimpleSlot(value)
+    return createSimpleSlot(value)
 
-  throw `unknown element: type="${typeof value}", data="${value}"`
+  throw new Error(`unknown element: type="${typeof value}", data="${value}"`)
 }
 
 type Renderer = (update: Node[]) => void
@@ -66,121 +72,129 @@ interface Slot {
   unmount(): void
 }
 
-class SimpleSlot implements Slot {
-  constructor(private source: SimpleElement) { }
-  mount(render: Renderer) {
-    render([document.createTextNode(`${this.source}`)])
-  }
+const absentSlot: Slot = {
+  mount(render) { render([]) },
   unmount() { }
 }
 
-class StaticSlot implements Slot {
-  private children?: Slot
-  constructor(private source: StaticElement) { }
-  mount(render: Renderer) {
-    const element = document.createElement(this.source.name)
-    function update(replacement: Node[]) {
-      element.replaceChildren(...replacement)
-    }
-    if (this.source.children) {
-      this.children = createSlot(this.source.children)
-      this.children.mount(update)
-    }
-    type StyleObject = Record<string, string | number | boolean>
-    function transformStyle(input: StyleObject) {
-      return Object.keys(input)
-        .map(key => `${kebabize(key)}: ${input[key]}`)
-        .join(';')
-    }
-    if (this.source.props) Object.keys(this.source.props)
-      .map(name => [name, this.source.props[name as keyof JSX.Props]] as [string, unknown])
-      .forEach(([name, value]) => {
-        if (typeof value === "function" && name === "socket")
-          (value as JSX.Socket<EventTarget>)(element)
-        else if (Array.isArray(value) && name === "class")
-          element.setAttribute("class", value.join(' '))
-        else if (typeof value === "object" && value && name === "style")
-          element.setAttribute("style", transformStyle(value as StyleObject))
-        else if (typeof value === "function" && name.match(/on[A-Z].*/))
-          element.addEventListener(name.substring(2).toLowerCase(), value as EventListenerOrEventListenerObject)
-        else
-          element.setAttribute(name.toLowerCase(), `${value}`)
-      })
-    render([element]);
-  }
-  unmount() { this.children?.unmount() }
-}
 
-class PluralSlot implements Slot {
-  private nodes: Node[][] = []
-  private slots: Slot[] = []
-  constructor(private source: PluralElement) { }
-  mount(render: Renderer) {
-    const updateSlot = (index: number, nodes: Node[]) => {
-      this.nodes[index] = nodes
-      render(this.nodes.flat())
-    }
-    this.source.map(createSlot)
-      .map((slot, index) => {
-        this.slots[index] = slot
-        slot.mount(nodes => updateSlot(index, nodes))
-      })
-    const flatten = () => {
-      return
-    }
-    return flatten()
-  }
-  unmount() {
-    this.slots.forEach(slot => slot.unmount())
+function createSimpleSlot(source: SimpleElement): Slot {
+  return {
+    mount(render) {
+      render([document.createTextNode(`${source}`)])
+    },
+    unmount() { }
   }
 }
 
-class FutureSlot implements Slot {
-  private live = true
-  private slot?: Slot
-  constructor(private source: FutureElement) { }
-  mount(update: Renderer) {
-    this.source.then(element => {
-      if (this.live) {
-        this.slot = createSlot(element)
-        this.slot.mount(update)
+function createStaticSlot(source: StaticElement): Slot {
+  let children: Slot | undefined
+  return {
+    mount(render) {
+      const element = document.createElement(source.name)
+      function update(replacement: Node[]) {
+        element.replaceChildren(...replacement)
       }
-    })
-  }
-  unmount() {
-    this.live = false;
-    this.slot?.unmount()
+      if (source.children) {
+        children = createSlot(source.children)
+        children.mount(update)
+      }
+      type StyleObject = Record<string, string | number | boolean>
+      function transformStyle(input: StyleObject) {
+        return Object.keys(input)
+          .map(key => `${kebabize(key)}: ${input[key]}`)
+          .join('; ')
+      }
+      if (source.props) Object.keys(source.props)
+        .map(name => [name, source.props[name as keyof JSX.Props]] as [string, unknown])
+        .forEach(([name, value]) => {
+          if (typeof value === "function" && name === "socket")
+            (value as JSX.Socket<EventTarget>)(element)
+          else if (Array.isArray(value) && name === "class")
+            element.setAttribute("class", value.join(' '))
+          else if (typeof value === "object" && value && name === "style")
+            element.setAttribute("style", transformStyle(value as StyleObject))
+          else if (typeof value === "function" && name.match(/on[A-Z].*/))
+            element.addEventListener(name.substring(2).toLowerCase(), value as EventListenerOrEventListenerObject)
+          else
+            element.setAttribute(name.toLowerCase(), `${value}`)
+        })
+      render([element]);
+    },
+    unmount() { children?.unmount() }
   }
 }
 
-class ActiveSlot implements Slot {
-  private live = true
-  private slot?: Slot
-  constructor(private source: ActiveElement) { }
-  mount(render: Renderer) {
-    (async () => {
-      let result: IteratorResult<JSX.Element>
-      do {
-        this.slot?.mount(render)
-        result = await this.source.next()
-        this.slot?.unmount()
-        this.slot = createSlot(result.value)
-      } while (this.live && !result.done)
-    })()
+function createPluralSlot(source: PluralElement): Slot {
+  const allNodes: Node[][] = []
+  const slots: Slot[] = []
+  return {
+    mount(render) {
+      const updateSlot = (index: number, nodes: Node[]) => {
+        allNodes[index] = nodes
+        render(allNodes.flat())
+      }
+      source.map(createSlot)
+        .map((slot, index) => {
+          slots[index] = slot
+          slot.mount(nodes => updateSlot(index, nodes))
+        })
+    },
+    unmount() {
+      slots.forEach(slot => slot.unmount())
+    }
   }
-  unmount() {
-    this.live = false;
-    this.slot?.unmount()
+}
+
+function createFutureSlot(source: FutureElement): Slot {
+  let live = true
+  let slot: Slot | undefined
+  return {
+    mount(update) {
+      source.then(element => {
+        if (live) {
+          slot = createSlot(element)
+          slot.mount(update)
+        }
+      })
+    },
+    unmount() {
+      live = false;
+      slot?.unmount()
+    }
+  }
+}
+
+function createActiveSlot(source: ActiveElement): Slot {
+  let live = true
+  let slot: Slot = absentSlot
+  return {
+    mount(render) {
+      (async () => {
+        let result: IteratorResult<JSX.Element | void>
+        do {
+          result = await source.next()
+          slot.unmount()
+          if (result.value !== undefined)
+            slot = createSlot(result.value)
+          else
+            slot = absentSlot
+          slot.mount(render)
+        } while (live && !result.done)
+      })()
+    },
+    unmount() {
+      live = false;
+      slot?.unmount()
+    }
   }
 }
 
 export function render(parent: Element, element: JSX.Element) {
-  function update(children: Node[]) {
-    parent.replaceChildren(...children)
-  }
+  const update = (children: Node[]) => parent.replaceChildren(...children)
   createSlot(element).mount(update)
 }
 
 // fragment
 
-export const Fragment = ({children}: {children: JSX.Element}) => children
+export const Fragment = ({ children }: { children: JSX.Element }) => children

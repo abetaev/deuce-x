@@ -1,3 +1,8 @@
+/// <reference no-default-lib="true" />
+/// <reference lib="DOM" />
+/// <reference lib="ES2021" />
+/// <reference path="./jsx.d.ts" />
+
 type EventOutput<T> = (handler: EventInput<T>) => () => void
 type EventInput<T> = (event: T) => void
 export function useEvent<T>(): [EventInput<T>, EventOutput<T>] {

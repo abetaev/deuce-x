@@ -9,7 +9,7 @@ declare namespace JSX {
 	type Element = Awaitable<StatefulElement | StatelessElement | FragmentElement | null>
 
 	type FragmentElement = Array<Element>
-	type StatefulElement = AsyncIterator<Element, Element | void, undefined>
+	type StatefulElement = AsyncIterator<Element | void, Element | void, undefined>
 	type StatelessElement = TextElement | NodeElement
 	type NodeElement = {
 		name: keyof IntrinsicElements

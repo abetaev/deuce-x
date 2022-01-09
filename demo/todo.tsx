@@ -1,8 +1,9 @@
 /** @jsx createElement */
+/** @jsxFrag Fragment */
 
-import { createElement, render, Fragment } from './jsx.ts'
-import { useLink, useWait, usePipe, useMux } from './use.ts'
-import type { PipeOutput } from './use.ts'
+import { createElement, render, Fragment } from '../jsx.ts'
+import { useLink, useWait, usePipe, useMux } from '../use.ts'
+import type { PipeOutput } from '../use.ts'
 
 type GroupProps = { children: JSX.Children }
 const Group = ({ children }: GroupProps) => <div class="group">{children}</div>
@@ -20,7 +21,7 @@ type TODOItemProps = { onDelete: () => void, onToggle: () => void, onChange: (te
 async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) {
   let editing = false
 
-  const View = () => <span style={{flexGrow: 1, display: "flex", alignItems: "center"}} onClick={() => { editing = true; update() }}>{item.text}</span>
+  const View = () => <div onClick={() => { editing = true; update() }}>{item.text}</div>
   const Edit = () => {
     const [socket, plug] = useLink<HTMLInputElement>()
     async function save() {
@@ -31,7 +32,7 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
       toggleEdit()
     }
     return (
-      <Fragment>
+      <>
         <input value={item.text} socket={socket} onKeyDown={({ key }) => {
           switch (key) {
             case "Enter": save(); break;
@@ -40,7 +41,7 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
         }} size={1} />
         <IconButton icon="save" class="primary" onClick={save} />
         <IconButton icon="clear" class="secondary" onClick={toggleEdit} />
-      </Fragment>
+      </>
     )
   }
   const [pause, update] = useWait()

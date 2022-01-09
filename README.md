@@ -24,8 +24,6 @@ supports 3 types of elements:
     these elements are like static, but require asynchronous operations to get data
 
 does not support:
-
- * fragments (needed!)
  
  * nodejs (maybe)
  
@@ -37,7 +35,6 @@ only quality 💩 here!
 TODO
 ====
 
- * support fragments
  * finish TODO demo
  * support SVG namespace
  * generate jsx type definitions from standard
