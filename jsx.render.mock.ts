@@ -2,6 +2,7 @@
 /// <reference lib="DOM" />
 /// <reference lib="ES2021" />
 /// <reference lib="deno.ns" />
+
 import { Document as DocumentImpl, Node, ElementCreationOptions } from "https://deno.land/x/deno_dom/deno-dom-wasm.ts";
 
 class DocumentMock extends DocumentImpl {
@@ -21,4 +22,5 @@ class DocumentMock extends DocumentImpl {
   }
 
 }
+
 globalThis.document = new DocumentMock as unknown as Document

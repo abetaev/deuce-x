@@ -68,21 +68,37 @@ async function* TODOItem({ onDelete, onToggle, onChange, item }: TODOItemProps) 
 }
 
 
-type TODOListProps = { items: Item[], onChange: (items: Item[]) => void, inputSource: PipeOutput<string> }
-async function* TODOList({ items, onChange, inputSource }: TODOListProps) {
+type TODOListProps = {
+  items: Item[],
+  onChange: (items: Item[]) => void,
+  inputSource: PipeOutput<string>,
+  filterSource: PipeOutput<{ type: "search", query: string } | { type: "status", query?: boolean }>
+}
+async function* TODOList({ items, onChange, inputSource, filterSource }: TODOListProps) {
 
   const [remove, removeSource] = usePipe<number>()
   const [toggle, toggleSource] = usePipe<number>()
 
-  const eventSource = useMux({ remove: removeSource, input: inputSource, toggle: toggleSource })
+  const eventSource = useMux({
+    remove: removeSource,
+    input: inputSource,
+    toggle: toggleSource,
+    filter: filterSource
+  })
+
+  let searchFilter = ""
+  let statusFilter: boolean | undefined = undefined
+
 
   const List = () => (
     <ul>
-      {items.map((item, id) => <TODOItem
-        onDelete={() => remove(id)} item={item}
-        onToggle={() => toggle(id)}
-        onChange={(text) => { items[id].text = text }}
-      />)}
+      {items.filter(({text}) => text.toLowerCase().includes(searchFilter))
+        .filter(({done}) => statusFilter === undefined || (!!done === statusFilter))
+        .map((item, id) => <TODOItem
+          onDelete={() => remove(id)} item={item}
+          onToggle={() => toggle(id)}
+          onChange={(text) => { items[id].text = text }}
+        />)}
     </ul>
   )
   yield <List />
@@ -92,6 +108,12 @@ async function* TODOList({ items, onChange, inputSource }: TODOListProps) {
       case "input": items.push({ done: false, text: message.value }); break;
       case "remove": items.splice(message.value, 1); break;
       case "toggle": items[message.value].done = !items[message.value].done; break;
+      case "filter":
+        switch (message.value.type) {
+          case "search": searchFilter = message.value.query; break;
+          case "status": statusFilter = message.value.query; break;
+        }
+        break;
     }
     onChange(items)
     yield <List />
@@ -102,26 +124,64 @@ async function* TODOList({ items, onChange, inputSource }: TODOListProps) {
 type TODOProps = { source: string }
 const TODO = ({ source }: TODOProps) => {
   const items: Item[] = JSON.parse(localStorage.getItem(source) || "[]")
-  const [addMessage, messagePipe] = usePipe<string>()
-  const [socket, plug] = useLink<HTMLInputElement>()
+  const [addTODO, todoPipe] = usePipe<string>()
+  const [filterTODO, filterPipe] = usePipe<{ type: "search", query: string } | { type: "status", query?: boolean }>()
+  const [inputSocket, inputPlug] = useLink<HTMLInputElement>()
+  const [searchFilterSocket, searchFilterPlug] = useLink<HTMLInputElement>()
+  const [statusFilterSocket, statusFilterPlug] = useLink<HTMLButtonElement>()
 
   async function create() {
-    const input = await plug
+    const input = await inputPlug
     const value = input.value
     input.value = ""
-    addMessage(value)
+    addTODO(value)
+  }
+
+  async function searchFilter() {
+    const input = await searchFilterPlug
+    filterTODO({ type: "search", query: input.value })
+  }
+
+  async function switchStatusFilter() {
+    const button = await statusFilterPlug
+    switch (button.innerText) {
+      case "indeterminate_check_box":
+        button.innerText = "check_box"
+        filterTODO({ type: "status", query: true })
+        break;
+      case "check_box":
+        button.innerText = "check_box_outline_blank"
+        filterTODO({ type: "status", query: false })
+        break;
+      case "check_box_outline_blank":
+        button.innerText = "indeterminate_check_box"
+        filterTODO({ type: "status" })
+        break;
+    }
   }
 
   return (
     <div class="todo">
-      <header>deuce-x TODO demo</header>
+      <header>
+        <Group>
+          <IconButton icon="indeterminate_check_box" class="secondary" onClick={switchStatusFilter}
+            socket={statusFilterSocket} />
+          <input type="text" socket={searchFilterSocket} onInput={searchFilter} placeholder="type to search for memo" />
+          <IconButton
+            icon="clear" class="danger"
+            onClick={async () => { (await searchFilterPlug).value = "" }} />
+        </Group>
+      </header>
       <main>
-        <TODOList items={items} inputSource={messagePipe} onChange={items => localStorage.setItem(source, JSON.stringify(items))} />
+        <TODOList items={items}
+          inputSource={todoPipe}
+          filterSource={filterPipe}
+          onChange={items => localStorage.setItem(source, JSON.stringify(items))}
+        />
       </main>
       <footer>
         <Group>
-          <IconButton icon="filter_list" onClick={() => alert("not implemented")} class="secondary" />
-          <input type="text" socket={socket} onKeyDown={({ key }) => key === "Enter" && create()} size={1} />
+          <input type="text" socket={inputSocket} onKeyDown={({ key }) => key === "Enter" && create()} size={1} />
           <IconButton icon="add" class="primary" onClick={create} />
         </Group>
       </footer>
@@ -129,12 +189,7 @@ const TODO = ({ source }: TODOProps) => {
   )
 }
 
-const Load = async ({ child }: { child: JSX.Element }) => {
-  await new Promise(resolve => setTimeout(resolve, Math.random() * 1000))
-  return child
-}
-
 render(
   document.body,
-  <Load child={<TODO source="todo" />} />
+  <TODO source="todo" />
 )

@@ -5,11 +5,11 @@
 /** @jsxFrag Fragment */
 
 import { h, render, Fragment } from './jsx.ts'
-import { useWait } from './use.ts'
+import { useWait, useLink } from './use.ts'
 
 import './jsx.render.mock.ts'
 
-import { assertEquals, assertThrows, fail } from "https://deno.land/std@0.120.0/testing/asserts.ts";
+import { assertEquals, assertThrows, assertStrictEquals } from "https://deno.land/std@0.120.0/testing/asserts.ts";
 const { test } = Deno
 
 test("render simple components", () => {
@@ -33,12 +33,21 @@ test("render simple components", () => {
 
 })
 
-test("render static components", () => {
+test("render static and plural components with socket", async () => {
 
   const root = document.createElement("container")
+  const [lock, release] = useWait()
+  const [socket, plug] = useLink()
+  const clickHandler = async ({target}: Event) => {
+    assertStrictEquals(target, await plug)
+    release()
+  }
 
   render(root, (
-    <ul style={{ borderStyle: "solid", borderColor: "black", borderWidth: "1px" }}>
+    <ul
+      style={{ borderStyle: "solid", borderColor: "black", borderWidth: "1px" }}
+      socket={socket} onClick={clickHandler}
+    >
       <li class={["primary", "selected"]}>item 0</li>
       <li class="secondary">item 1</li>
       <li class="tertiary">item 2</li>
@@ -50,6 +59,9 @@ test("render static components", () => {
   assertEquals(ul.tagName, "UL")
   assertEquals(ul.childNodes.length, 3)
   assertEquals(ul.getAttribute("style"), "border-style: solid; border-color: black; border-width: 1px")
+  ul.dispatchEvent(new CustomEvent("click"))
+  await lock()
+  assertStrictEquals(ul, await plug)
   const expectedClasses = ["primary selected", "secondary", "tertiary"]
   for (let i = 0; i < 3; i++) {
     const li = ul.childNodes[i] as Element
@@ -64,12 +76,12 @@ test("render future component", async () => {
 
   const root = document.createElement("container")
 
-  const FutureComponent = async ({ text, delay }: { text: string, delay: number }) => {
-    await new Promise(resolve => setTimeout(resolve, delay))
+  const FutureComponent = async ({ text, ms }: { text: string, ms: number }) => {
+    await delay(ms)
     return <div>{text}</div>
   }
 
-  render(root, <FutureComponent text="hello from future" delay={5} />)
+  render(root, <FutureComponent text="hello from future" ms={5} />)
 
   assertEquals(root.childNodes.length, 0)
 
@@ -80,6 +92,29 @@ test("render future component", async () => {
   assertEquals(div.tagName, "DIV")
   assertEquals(div.childNodes.length, 1)
   assertEquals(div.childNodes[0].textContent, "hello from future")
+
+})
+
+test("unmount future in active lifecycle", async () => {
+
+  const root = document.createElement("container")
+
+  const FutureComponent = async () => {
+    await delay()
+    return "should not be rendered"
+  }
+
+  const ActiveComponent = async function* () {
+    yield <FutureComponent />
+    return "this should be rendered"
+  }
+
+  render(root, <ActiveComponent />)
+
+  await delay(20)
+
+  assertEquals(root.childNodes.length, 1)
+  assertEquals(root.childNodes[0].textContent, "this should be rendered")
 
 })
 
@@ -157,6 +192,8 @@ test("render active component without return", async () => {
 
 })
 
+// TODO: case for active component unmount
+
 test("try render undefined", () => {
   const root = document.createElement("container")
 
@@ -169,4 +206,4 @@ test("try render undefined", () => {
   )
 })
 
-const delay = (ms = 10) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms = 5) => new Promise(resolve => setTimeout(resolve, ms))
