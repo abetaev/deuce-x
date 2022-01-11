@@ -1,9 +1,10 @@
 /** @jsx createElement */
 /** @jsxFrag Fragment */
 
-import { createElement, render, Fragment } from '../jsx.ts'
-import { useLink, useWait, usePipe, useMux } from '../use.ts'
-import type { PipeOutput } from '../use.ts'
+import { createElement, render } from '../../jsx.ts'
+import { useLink, useWait, usePipe, useMux } from '../../use.ts'
+import type { PipeOutput } from '../../use.ts'
+import { Fragment } from '../../cmp.tsx'
 
 type GroupProps = { children: JSX.Children }
 const Group = ({ children }: GroupProps) => <div class="group">{children}</div>
@@ -169,7 +170,7 @@ const TODO = ({ source }: TODOProps) => {
           <input type="text" socket={searchFilterSocket} onInput={searchFilter} placeholder="type to search for memo" />
           <IconButton
             icon="clear" class="danger"
-            onClick={async () => { (await searchFilterPlug).value = "" }} />
+            onClick={async () => { (await searchFilterPlug).value = ""; searchFilter() }} />
         </Group>
       </header>
       <main>

@@ -41,7 +41,7 @@ export function usePipe<T>(): [PipeInput<T>, PipeOutput<T>] {
       })
       while (true) {
         await lock()
-        if (value !== undefined) yield value
+        yield value as unknown as T
       }
     }
   ]

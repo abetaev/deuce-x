@@ -40,6 +40,9 @@ export const createElement = <T>(component: Component<T>, props: T, ...children:
     children: children.length === 1 ? children[0] : children
   };
 
+  if (Array.isArray(component)) // this appears to be the case if rendering <State/> ¯\_(ツ)_/¯
+    return component.map(subcomponent => createElement(subcomponent, props, ...children))
+
   return component({ children, ...props }) as JSX.Element // TODO: why this cast is required?
 
 }
@@ -190,11 +193,7 @@ function createActiveSlot(source: ActiveElement): Slot {
   }
 }
 
-export function render(parent: Element, element: JSX.Element) {
+export function render(parent: Element, ...element: JSX.Element[]) {
   const update = (children: Node[]) => parent.replaceChildren(...children)
   createSlot(element).mount(update)
 }
-
-// fragment
-
-export const Fragment = ({ children }: { children: JSX.Element }) => children

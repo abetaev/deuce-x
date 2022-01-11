@@ -4,10 +4,12 @@
 /** @jsx h */
 /** @jsxFrag Fragment */
 
-import { h, render, Fragment } from './jsx.ts'
+import { h, render } from './jsx.ts'
+import { Fragment } from './cmp.tsx'
 import { useWait, useLink } from './use.ts'
+import { delay } from './util.ts'
 
-import './jsx.render.mock.ts'
+import './jsx.mock.ts'
 
 import { assertEquals, assertThrows, assertStrictEquals } from "https://deno.land/std@0.120.0/testing/asserts.ts";
 const { test } = Deno
@@ -38,7 +40,7 @@ test("render static and plural components with socket", async () => {
   const root = document.createElement("container")
   const [lock, release] = useWait()
   const [socket, plug] = useLink()
-  const clickHandler = async ({target}: Event) => {
+  const clickHandler = async ({ target }: Event) => {
     assertStrictEquals(target, await plug)
     release()
   }
@@ -81,7 +83,7 @@ test("render future component", async () => {
     return <div>{text}</div>
   }
 
-  render(root, <FutureComponent text="hello from future" ms={5} />)
+  render(root, <FutureComponent text="hello from future" ms={1} />)
 
   assertEquals(root.childNodes.length, 0)
 
@@ -205,5 +207,3 @@ test("try render undefined", () => {
     'unknown element: type="undefined", data="undefined"'
   )
 })
-
-const delay = (ms = 5) => new Promise(resolve => setTimeout(resolve, ms))

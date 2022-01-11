@@ -1,46 +1,123 @@
-description
-===========
+# deuce-x
+
+reactive like 💩 implementation of JSX.
 
 this is opinion on how JSX should be implemented inspired by:
- 1. curiosity to [crank-js](https://crank.js.org/)
- 2. and hate to [react](https://reactjs.org/)
 
-demo is [here](https://abetaev.github.io/deuce-x/).
+1. curiosity about [crank-js](https://crank.js.org/)
+2. and hatred for [react](https://reactjs.org/)
 
-supports 3 types of elements:
+## documentation
 
- 1. static - regular elements
+### base API: jsx.ts
 
-    this is either intrinsic HTML elements or custom elements withour state
+```tsx
+/** @jsx h */
+import { h, render } from "<...>/jsx.ts";
 
- 2. active - elements which return AsyncIterator (e.g. `function*`)
+render(
+  document.body, /* or any other element */
+  <div>hello world</div>,
+);
+```
 
-    each value returned from iterator should be valid element to be rendered
+### `Fragment` support
 
-    these are stateful elements which may change over time
+```tsx
+/** @jsx h */
+/** @jsxFrag Fragment */
+import { h } from "<...>/jsx.ts";
+import { Fragment } from "<...>/cmp.ts";
 
- 3. future - elements which return promise (e.g. `async function`)
+const FragmentedComponent = () => (
+  <>
+    <div>first</div>
+    <div>second</div>
+    <div>third</div>
+  </>
+);
+```
 
-    these elements are like static, but require asynchronous operations to get data
+or use arrays instead
 
-does not support:
- 
- * nodejs (maybe)
- 
- * and other SSR shit (never!)
- 
-only quality 💩 here!
+```tsx
+/** @jsx h */
+import { h } from "<...>/jsx.ts";
 
+const FragmentedComponent = () => [
+  <div>first</div>,
+  <div>second</div>,
+  <div>third</div>,
+];
+```
 
-TODO
-====
+but don't forget about commas.
 
- * finish TODO demo
- * support SVG namespace
- * generate jsx type definitions from standard
- * write real docs
- * write at least some tests
- * check for memory leaks
- * check for performance
- * structure project properly
- * and 💩 of course
+### active component
+
+```tsx
+/** @jsx h */
+import { h } from "<...>/jsx.ts";
+
+type CounterProps = { delay: number };
+async function* Counter({ delay }: CounterProps) {
+  let count = 0; // <-- this is state
+  while (true) {
+    yield count++; // <-- this will be rendered
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+```
+
+### future component
+
+```tsx
+/** @jsx h */
+import { h } from "<...>/jsx.ts";
+
+type CounterProps = { delay: number };
+async function Delayed({ delay }: CounterProps) {
+  await new Promise((resolve) => setTimeout(resolve, delay));
+  return `i came with ${delay}ms delay`;
+}
+```
+
+### getting reference to rendered elements
+
+```tsx
+/** @jsx h */
+/** @jsxFrag Fragment */
+import { h } from "<...>/jsx.ts";
+import { Fragment } from "<...>/cmp.ts";
+import { useLink } from "<...>/use.ts";
+
+const [socket, plug] = useLink<HTMLInputElement>();
+
+const Interactive = () => (
+  <>
+    <input socket={socket} />
+    <button
+      onClick={async () => {
+        alert(`you have entered: ${(await plug).value}`);
+      }}
+    />
+  </>
+);
+```
+
+### further reading
+
+rerer to:
+
+- [demo](./examples/demo/demo.tsx) **for advanced use cases and demonstration**
+
+- [todo](./examples/todo/) implementation example
+
+## TODO
+
+- refactor TODO demo
+- support SVG namespace
+- generate jsx type definitions from standard
+- write more docs
+- check for memory leaks
+- check for performance ( --> optimize )
