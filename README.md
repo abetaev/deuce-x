@@ -1,6 +1,6 @@
 # deuce-x
 
-reactive like 💩 implementation of JSX.
+reactive like 💩 implementation of JSX for browser.
 
 this is opinion on how JSX should be implemented inspired by:
 
