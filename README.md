@@ -7,7 +7,17 @@ this is opinion on how JSX should be implemented inspired by:
 1. curiosity about [crank-js](https://crank.js.org/)
 2. and hatred for [react](https://reactjs.org/)
 
-## documentation
+## requirements
+
+this project requires:
+
+- [deno](https://deno.land/)
+
+- (modern) web browser
+
+> **NOTE**: it does not support any kind of server-side rendering.
+
+## usage
 
 consists of:
 
