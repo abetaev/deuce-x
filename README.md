@@ -37,7 +37,7 @@ provides:
 
 ```tsx
 /** @jsx h */
-import { h, render } from "<...>/jsx.ts";
+import { h, render } from "https://deno.land/x/deuce_x/jsx.ts";
 
 render(
   document.body, /* or any other element */
