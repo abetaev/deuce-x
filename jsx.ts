@@ -25,9 +25,7 @@ type SyntheticComponent<T> =
 
 type IntrinsicComponent = keyof JSX.IntrinsicElements
 
-type SimpleComponent = () => SimpleElement
-
-type Component<T = Record<string, unknown>> = IntrinsicComponent | SyntheticComponent<T> | SimpleComponent
+export type Component<T> = IntrinsicComponent | SyntheticComponent<T>
 
 export const createElement = <T>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
 

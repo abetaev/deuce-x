@@ -6,12 +6,12 @@
 type EventOutput<T> = (handler: EventInput<T>) => () => void
 type EventInput<T> = (event: T) => void
 export function useEvent<T>(): [EventInput<T>, EventOutput<T>] {
-  let subscriptions: EventInput<T>[] = []
+  const subscriptions: EventInput<T>[] = []
   return [
-    (event) => subscriptions.forEach(handle => handle(event)),
+    (event) => Promise.resolve().then(() => subscriptions.forEach(handle => handle(event))),
     (handler) => {
       subscriptions.push(handler)
-      return () => subscriptions = subscriptions.filter(that => that !== handler)
+      return () => subscriptions.splice(subscriptions.indexOf(handler), 1)
     }
   ]
 }
