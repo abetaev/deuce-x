@@ -1,0 +1,3 @@
+#!/bin/sh
+
+deno run --allow-run --allow-read view.ts

@@ -9,7 +9,7 @@ import { kebabize } from './util.ts'
 
 type SimpleElement = Awaited<JSX.TextElement>
 type StaticElement = Awaited<JSX.NodeElement>
-type ActiveElement = AsyncIterator<JSX.Element | void, JSX.Element | void>
+type ActiveElement = AsyncIterator<JSX.Element | void, JSX.Element | void, boolean>
 type FutureElement = Promise<JSX.Element>
 type PluralElement = Array<JSX.Element>
 
@@ -27,7 +27,7 @@ type IntrinsicComponent = keyof JSX.IntrinsicElements
 
 export type Component<T> = IntrinsicComponent | SyntheticComponent<T>
 
-export const createElement = <T>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
+export const createElement = <T extends Record<string, unknown>>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
 
   const isIntrinsicComponent = (component: Component<T>): component is IntrinsicComponent =>
     typeof component === "string";
@@ -41,7 +41,7 @@ export const createElement = <T>(component: Component<T>, props: T, ...children:
   if (Array.isArray(component)) // this appears to be the case if rendering <State/> ¯\_(ツ)_/¯
     return component.map(subcomponent => createElement(subcomponent, props, ...children))
 
-  return component({ children, ...props }) as JSX.Element // TODO: why this cast is required?
+  return component({ children, ...props } as unknown as T) as JSX.Element // TODO: why this cast is required?
 
 }
 
@@ -107,7 +107,7 @@ function createStaticSlot(source: StaticElement): Slot {
           .join('; ')
       }
       if (source.props) Object.keys(source.props)
-        .map(name => [name, source.props[name as keyof JSX.Props]] as [string, unknown])
+        .map(name => [name, source.props[name]] as [string, unknown])
         .forEach(([name, value]) => {
           if (typeof value === "function" && name === "socket")
             (value as JSX.Socket<EventTarget>)(element)
@@ -133,6 +133,7 @@ function createPluralSlot(source: PluralElement): Slot {
     mount(render) {
       const updateSlot = (index: number, nodes: Node[]) => {
         allNodes[index] = nodes
+        // TODO: can send more detailed info to render for efficiency
         render(allNodes.flat())
       }
       source.map(createSlot)
@@ -174,7 +175,7 @@ function createActiveSlot(source: ActiveElement): Slot {
       (async () => {
         let result: IteratorResult<JSX.Element | void>
         do {
-          result = await source.next()
+          result = await source.next(live)
           slot.unmount()
           if (result.value !== undefined)
             slot = createSlot(result.value)
@@ -182,6 +183,7 @@ function createActiveSlot(source: ActiveElement): Slot {
             slot = absentSlot
           slot.mount(render)
         } while (live && !result.done)
+        if (!result.done) await source.next(false)
       })()
     },
     unmount() {

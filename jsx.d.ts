@@ -1,19 +1,16 @@
-type Awaitable<T> = T | Promise<T>
-
 declare namespace JSX {
-
-	type Props = ElementChildrenAttribute & HTMLAttributes<EventTarget>
 
 	type Children = Element
 
+	type Awaitable<T> = T | Promise<T>
 	type Element = Awaitable<StatefulElement | StatelessElement | FragmentElement | null>
 
 	type FragmentElement = Array<Element>
-	type StatefulElement = AsyncIterator<Element | void, Element | void, undefined>
+	type StatefulElement = AsyncIterator<Element | void, Element | void, boolean>
 	type StatelessElement = TextElement | NodeElement
 	type NodeElement = {
 		name: keyof IntrinsicElements
-		props: Props
+		props: Record<string, unknown>
 		children?: Children
 	}
 	type TextElement = string | boolean | number

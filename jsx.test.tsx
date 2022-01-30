@@ -97,26 +97,31 @@ test("render future component", async () => {
 
 })
 
-test("unmount future in active lifecycle", async () => {
+test("unmount in active lifecycle", async () => {
 
   const root = document.createElement("container")
 
-  const FutureComponent = async () => {
-    await delay()
-    return "should not be rendered"
-  }
+  const UnmountedComponent = () => (
+    <ul>
+      <li>this</li>
+      <li>should</li>
+      <li>not</li>
+      <li>be</li>
+      <li>visible</li>
+    </ul>
+  )
 
   const ActiveComponent = async function* () {
-    yield <FutureComponent />
-    return "this should be rendered"
+    yield <UnmountedComponent />
+    return "this should be visible"
   }
 
   render(root, <ActiveComponent />)
 
-  await delay(20)
+  await delay()
 
   assertEquals(root.childNodes.length, 1)
-  assertEquals(root.childNodes[0].textContent, "this should be rendered")
+  assertEquals(root.childNodes[0].textContent, "this should be visible")
 
 })
 
