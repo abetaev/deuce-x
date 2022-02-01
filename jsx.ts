@@ -7,27 +7,21 @@ import { kebabize } from './util.ts'
 
 // create
 
-type SimpleElement = Awaited<JSX.TextElement>
-type StaticElement = Awaited<JSX.NodeElement>
-type ActiveElement = AsyncIterator<JSX.Element | void, JSX.Element | void, boolean>
-type FutureElement = Promise<JSX.Element>
-type PluralElement = Array<JSX.Element>
-
-type PluralComponent<T> = (props: T) => PluralElement
-type StaticComponent<T> = (props: T) => StaticElement
-type ActiveComponent<T> = (props: T) => ActiveElement
-type FutureComponent<T> = (props: T) => FutureElement
+type ArrayComponent<T> = (props: T) => JSX.ArrayElement
+type StatelessComponent<T> = (props: T) => JSX.StatelessElement
+type StatefulComponent<T> = (props: T) => JSX.StatefulElement
+type FutureComponent<T> = (props: T) => JSX.FutureElement
 type SyntheticComponent<T> =
-  StaticComponent<T>
-  | ActiveComponent<T>
+  StatelessComponent<T>
+  | StatefulComponent<T>
   | FutureComponent<T>
-  | PluralComponent<T>
+  | ArrayComponent<T>
 
 type IntrinsicComponent = keyof JSX.IntrinsicElements
 
 export type Component<T> = IntrinsicComponent | SyntheticComponent<T>
 
-export const createElement = <T extends Record<string, unknown>>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
+export const createElement = <T extends Record<string, unknown> = Record<string, unknown>>(component: Component<T>, props: T, ...children: JSX.Element[]): JSX.Element => {
 
   const isIntrinsicComponent = (component: Component<T>): component is IntrinsicComponent =>
     typeof component === "string";
@@ -41,7 +35,7 @@ export const createElement = <T extends Record<string, unknown>>(component: Comp
   if (Array.isArray(component)) // this appears to be the case if rendering <State/> ¯\_(ツ)_/¯
     return component.map(subcomponent => createElement(subcomponent, props, ...children))
 
-  return component({ children, ...props } as unknown as T) as JSX.Element // TODO: why this cast is required?
+  return component({ children, ...props }) // TODO: why this cast is required?
 
 }
 
@@ -52,16 +46,16 @@ export const h = createElement
 function createSlot(value: JSX.Element): Slot {
   if (value === null) return absentSlot
 
-  if (Array.isArray(value)) return createPluralSlot(value)
+  if (Array.isArray(value)) return createArraySlot(value)
 
   if (typeof value === "object") {
-    if ("name" in value) return createStaticSlot(value)
-    if ("next" in value) return createActiveSlot(value)
+    if ("name" in value) return createStatelessSlot(value)
+    if ("next" in value) return createStatefulSlot(value)
     if ("then" in value) return createFutureSlot(value)
   } else if (typeof value === "string"
     || typeof value === "boolean"
     || typeof value === "number")
-    return createSimpleSlot(value)
+    return createTextSlot(value)
 
   throw new Error(`unknown element: type="${typeof value}", data="${value}"`)
 }
@@ -79,7 +73,7 @@ const absentSlot: Slot = {
 }
 
 
-function createSimpleSlot(source: SimpleElement): Slot {
+function createTextSlot(source: JSX.TextElement): Slot {
   return {
     mount(render) {
       render([document.createTextNode(`${source}`)])
@@ -88,7 +82,7 @@ function createSimpleSlot(source: SimpleElement): Slot {
   }
 }
 
-function createStaticSlot(source: StaticElement): Slot {
+function createStatelessSlot(source: JSX.NodeElement): Slot {
   let children: Slot | undefined
   return {
     mount(render) {
@@ -126,7 +120,7 @@ function createStaticSlot(source: StaticElement): Slot {
   }
 }
 
-function createPluralSlot(source: PluralElement): Slot {
+function createArraySlot(source: JSX.ArrayElement): Slot {
   const allNodes: Node[][] = []
   const slots: Slot[] = []
   return {
@@ -148,7 +142,7 @@ function createPluralSlot(source: PluralElement): Slot {
   }
 }
 
-function createFutureSlot(source: FutureElement): Slot {
+function createFutureSlot(source: JSX.FutureElement): Slot {
   let live = true
   let slot: Slot | undefined
   return {
@@ -167,7 +161,7 @@ function createFutureSlot(source: FutureElement): Slot {
   }
 }
 
-function createActiveSlot(source: ActiveElement): Slot {
+function createStatefulSlot(source: JSX.StatefulElement): Slot {
   let live = true
   let slot: Slot = absentSlot
   return {

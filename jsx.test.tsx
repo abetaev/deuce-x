@@ -97,34 +97,6 @@ test("render future component", async () => {
 
 })
 
-test("unmount in active lifecycle", async () => {
-
-  const root = document.createElement("container")
-
-  const UnmountedComponent = () => (
-    <ul>
-      <li>this</li>
-      <li>should</li>
-      <li>not</li>
-      <li>be</li>
-      <li>visible</li>
-    </ul>
-  )
-
-  const ActiveComponent = async function* () {
-    yield <UnmountedComponent />
-    return "this should be visible"
-  }
-
-  render(root, <ActiveComponent />)
-
-  await delay()
-
-  assertEquals(root.childNodes.length, 1)
-  assertEquals(root.childNodes[0].textContent, "this should be visible")
-
-})
-
 test("render active component with return", async () => {
   const root = document.createElement("container")
 
@@ -199,7 +171,64 @@ test("render active component without return", async () => {
 
 })
 
-// TODO: case for active component unmount
+test("unmount in active lifecycle", async () => {
+
+  const root = document.createElement("container")
+
+  const UnmountedComponent = () => (
+    <ul>
+      <li>this</li>
+      <li>should</li>
+      <li>not</li>
+      <li>be</li>
+      <li>visible</li>
+    </ul>
+  )
+
+  const ActiveComponent = async function* () {
+    yield <UnmountedComponent />
+    return "this should be visible"
+  }
+
+  render(root, <ActiveComponent />)
+
+  await delay()
+
+  assertEquals(root.childNodes.length, 1)
+  assertEquals(root.childNodes[0].textContent, "this should be visible")
+
+})
+
+// TODO: figure out why this doesn't work
+test({
+  name: "unmount active in active",
+  ignore: true,
+  async fn() {
+
+    const root = document.createElement("container")
+
+    const ActiveChildElement = async function* () {
+      for (let i = 0; i < 10; i++) {
+        const result: boolean = yield i
+        await delay()
+        if (!result) return
+      }
+    }
+
+    const ActiveParentElement = async function* () {
+      yield <ActiveChildElement />
+      return "this should be visible"
+    }
+
+    render(root, <ActiveParentElement />)
+
+    await delay(100)
+
+    assertEquals(root.childNodes.length, 1)
+    assertEquals(root.childNodes[0].textContent, "this should be visible")
+
+  }
+})
 
 test("try render undefined", () => {
   const root = document.createElement("container")

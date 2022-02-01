@@ -2,10 +2,11 @@ declare namespace JSX {
 
 	type Children = Element
 
-	type Awaitable<T> = T | Promise<T>
-	type Element = Awaitable<StatefulElement | StatelessElement | FragmentElement | null>
+	type CurrentElement = StatefulElement | StatelessElement | ArrayElement | null
+	type FutureElement = Promise<CurrentElement>
+	type Element = CurrentElement | FutureElement
 
-	type FragmentElement = Array<Element>
+	type ArrayElement = Array<Element>
 	type StatefulElement = AsyncIterator<Element | void, Element | void, boolean>
 	type StatelessElement = TextElement | NodeElement
 	type NodeElement = {
