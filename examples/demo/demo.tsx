@@ -2,9 +2,9 @@
 /** @jsxFrag Fragment */
 
 import { createElement, render } from '../../jsx.ts'
-import { useLink, useWait, useEvent, usePipe, useMux } from '../../use.ts'
+import { useLink, useWait, useEvent, usePipe } from '../../use.ts'
 import type { PipeOutput } from '../../use.ts'
-import { Fragment, State } from '../../cmp.tsx'
+import { Fragment, Managed, Stateful } from '../../cmp.tsx'
 import { delay } from '../../util.ts'
 
 type StaticComponentProps = { to: string }
@@ -19,7 +19,7 @@ async function* ActiveComponent({ }: ActiveComponentProps) {
   return <div>what are the odds?.. or evens?</div>
 }
 
-async function* stateProvider() {
+async function* stateProvider(): AsyncGenerator<{ to: string }, { to: string }, boolean> {
   yield { to: "me" }
   await delay(5000)
   return { to: "you" }
@@ -47,23 +47,29 @@ const [emitEvent, onEvent] = useEvent<string>()
 onEvent(event => alert(`alert received: ${event}`))
 
 const [sendToPipe, eventPipe] = usePipe<void>()
-type PipeListenerProps = {input: PipeOutput<void>}
-const PipeListener = async function*({input}: PipeListenerProps) {
+type PipeListenerProps = { input: PipeOutput<void> }
+const PipeListener = async function* ({ input }: PipeListenerProps) {
   let events = 0;
   for await (const event of input()) {
-    events ++
+    events++
     yield `received ${events} events so far`
   }
 }
+
+const [lockManaged, updateManaged] = useWait()
+type ManagedProps = { counter: number }
+const ManagedComponent = ({ counter }: ManagedProps) => `i counted till ${counter}`
+type ManagedState = ManagedProps
+const managedState: ManagedState = { counter: 0 }
 
 // this function renders everything into provided element
 render(
   document.body, // <-- this is where we are going to render
 
-  
+
   // valid element can be either:
 
-  
+
   // 1. any primitive
 
   //    - a string:
@@ -91,7 +97,7 @@ render(
   <div>
     <ActiveComponent limit={10} />
   </div>,
-  
+
 
   // 7. fragments are fully supported:
   <>
@@ -114,9 +120,9 @@ render(
   //    with special <State/> component and generator
   //    function:
   <div>
-    <State input={stateProvider}>
+    <Stateful input={stateProvider}>
       {StaticComponent}
-    </State>
+    </Stateful>
   </div>,
 
 
@@ -124,11 +130,10 @@ render(
   //     created by generator function or manually
   //     constructed:
   <div>
-    <State input={stateProvider()}>
+    <Stateful input={stateProvider()}>
       {StaticComponent}
-    </State>
+    </Stateful>
   </div>,
-
 
   // 11. if you need to fetch an object from a server
   //     you may need to use Promise, future component
@@ -162,9 +167,16 @@ render(
   //     - usePipe allows to transform events into state
   <div>
     <button onClick={() => sendToPipe()}>generate pipe event</button>
-    <PipeListener input={eventPipe}/>
-  </div>
+    <PipeListener input={eventPipe} />
+  </div>,
 
   //     - useMux allows to multiplex several pipes into one (see TODO example)  
+
+  // 13. managed component which allows to rerender
+  //     its contents on external change
+  <div>
+    <Managed lock={lockManaged} state={managedState}>{ManagedComponent}</Managed>
+    <button onClick={() => {managedState.counter ++; updateManaged()}}>increment managed state</button>
+  </div>,
 
 )

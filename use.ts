@@ -1,10 +1,10 @@
 /// <reference no-default-lib="true" />
 /// <reference lib="DOM" />
 /// <reference lib="ES2021" />
-/// <reference path="./jsx.d.ts" />
+/// <reference path="./jsx.defs.ts" />
 
-type EventOutput<T> = (handler: EventInput<T>) => () => void
-type EventInput<T> = (event: T) => void
+export type EventOutput<T> = (handler: EventInput<T>) => () => void
+export type EventInput<T> = (event: T) => void
 export function useEvent<T>(): [EventInput<T>, EventOutput<T>] {
   const subscriptions: EventInput<T>[] = []
   return [
@@ -28,39 +28,62 @@ export function useWait(): [WaitLock, WaitOpen] {
 
 export type PipeOutput<T> = () => AsyncIterable<T>
 export type PipeInput<T> = (event: T) => void
-export function usePipe<T>(): [PipeInput<T>, PipeOutput<T>] {
+export function usePipe<T>(): [PipeInput<T>, PipeOutput<T>, () => void] {
   const [send, onReceive] = useEvent<T>()
+  const [lock, open] = useWait()
+  let live = true
   return [
     send,
     async function* () {
-      const [lock, open] = useWait()
       let value: T | undefined = undefined
       onReceive(newValue => {
         value = newValue
         open()
       })
-      while (true) {
+      while (live) {
         await lock()
         yield value as unknown as T
       }
-    }
+    },
+    () => { live = false }
   ]
 }
 
-export type MuxSource<T> = { [name in keyof T]: PipeOutput<T[name]> }
-export type MuxTarget<T> = PipeOutput<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
-export function useMux<T>(input: MuxSource<T>): MuxTarget<T> {
-  const [send, target] = usePipe<{ type: keyof T, value: T[keyof T] }>()
+export type PipeMuxSource<T> = { [name in keyof T]: PipeOutput<T[name]> }
+export type PipeMuxTarget<T> = PipeOutput<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
+export function muxPipes<T>(input: PipeMuxSource<T>): [PipeMuxTarget<T>, () => void] {
+  const [send, target, close] = usePipe<{ type: keyof T, value: T[keyof T] }>()
+  let live = true
   Object.keys(input)
     .map(name => name as keyof T)
     .forEach(async (type) => {
       for await (const value of input[type]())
-        send({ type, value })
+        if (live) send({ type, value })
+        else return
     })
-  return target
+  return [target, () => { live = false; close() }]
 }
 
-export function useLink<T extends HTMLElement>():[JSX.Socket<T>, Promise<T>] {
+export type EventMuxSource<T> = { [name in keyof T]: EventOutput<T[name]> }
+export type EventMuxTarget<T> = EventOutput<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
+export function muxEvents<T>(input: EventMuxSource<T>): EventMuxTarget<T> {
+  const [send, target] = useEvent<{ type: keyof T, value: T[keyof T] }>()
+  const closeHandlers: (() => void)[] = []
+  Object.keys(input)
+    .map(name => name as keyof T)
+    .forEach((type) => {
+      closeHandlers.push(input[type](value => send({ type, value })))
+    })
+  return (handler) => {
+    const close = target(handler)
+    return () => {
+      close()
+      closeHandlers.forEach(close => close())
+    }
+  }
+}
+
+export function useLink<T extends HTMLElement>(): [JSX.Socket<T>, Promise<T>] {
   let socket: JSX.Socket<T> | undefined = undefined
   const plug = new Promise<T>(resolve => socket = resolve)
   if (!socket) throw 'unable to create link'

@@ -2,7 +2,7 @@
 /** @jsxFrag Fragment */
 
 import { createElement, render } from '../../jsx.ts'
-import { useLink, useWait, usePipe, useMux } from '../../use.ts'
+import { useLink, useWait, usePipe, muxPipes } from '../../use.ts'
 import type { PipeOutput } from '../../use.ts'
 import { Fragment } from '../../cmp.tsx'
 
@@ -80,7 +80,7 @@ async function* TODOList({ items, onChange, inputSource, filterSource }: TODOLis
   const [remove, removeSource] = usePipe<number>()
   const [toggle, toggleSource] = usePipe<number>()
 
-  const eventSource = useMux({
+  const [eventSource] = muxPipes({
     remove: removeSource,
     input: inputSource,
     toggle: toggleSource,
