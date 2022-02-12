@@ -1,8 +1,8 @@
 /// <reference no-default-lib="true" />
 /// <reference lib="DOM" />
 /// <reference lib="ES2021" />
-/// <reference path="./jsx.defs.ts" />
 
+import './jsx.defs.ts'
 import { kebabize } from './util.ts'
 
 // create
