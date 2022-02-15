@@ -3,10 +3,15 @@
 /// <reference lib="ES2021" />
 /// <reference path="./jsx.defs.ts" />
 
-export type EventOutput<T> = (handler: EventInput<T>) => () => void
-export type EventInput<T> = (event: T) => void
-export function useEvent<T>(): [EventInput<T>, EventOutput<T>] {
-  const subscriptions: EventInput<T>[] = []
+type Desctructor = () => void
+
+export type Sender<T> = (value: T) => void
+export type Handler<T> = Sender<T>
+export type Output<T> = () => AsyncIterable<T>
+
+export type Subscriptor<T> = (handler: Handler<T>) => Desctructor
+export function useEvent<T>(): [Sender<T>, Subscriptor<T>] {
+  const subscriptions: Sender<T>[] = []
   return [
     (event) => Promise.resolve().then(() => subscriptions.forEach(handle => handle(event))),
     (handler) => {
@@ -26,32 +31,53 @@ export function useWait(): [WaitLock, WaitOpen] {
   ]
 }
 
-export type PipeOutput<T> = () => AsyncIterable<T>
-export type PipeInput<T> = (event: T) => void
-export function usePipe<T>(): [PipeInput<T>, PipeOutput<T>, () => void] {
-  const [send, onReceive] = useEvent<T>()
+export function usePipe<T>(source?: [Sender<T>, Subscriptor<T>]): [Sender<T>, Output<T>, Desctructor] {
+  const [send, onReceive] = source ? source : useEvent<T>()
   const [lock, open] = useWait()
   let live = true
   return [
     send,
     async function* () {
       let value: T | undefined = undefined
-      onReceive(newValue => {
+      const unsubscribe = onReceive(newValue => {
         value = newValue
         open()
       })
       while (live) {
         await lock()
-        yield value as unknown as T
+        if (value !== undefined) yield value
       }
+      unsubscribe()
     },
     () => { live = false }
   ]
 }
 
-export type PipeMuxSource<T> = { [name in keyof T]: PipeOutput<T[name]> }
-export type PipeMuxTarget<T> = PipeOutput<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
-export function muxPipes<T>(input: PipeMuxSource<T>): [PipeMuxTarget<T>, () => void] {
+export function useStream<T>(source?: [Sender<T>, Subscriptor<T>]): [Sender<T>, Output<T>, Desctructor] {
+  const [send, onReceive] = source ? source : useEvent<T>()
+  const [lock, open] = useWait()
+  let live = true
+  return [
+    send,
+    async function* () {
+      let buffer: T[] = []
+      const unsubscribe = onReceive(newValue => {
+        buffer.push(newValue)
+        open()
+      })
+      while (live) {
+        if (!buffer.length) await lock()
+        yield buffer.splice(0, 1)[0]
+      }
+      unsubscribe()
+    },
+    () => { live = false }
+  ]
+}
+
+export type OutputMuxSource<T> = { [name in keyof T]: Output<T[name]> }
+export type OutputMuxTarget<T> = Output<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
+export function muxPipes<T>(input: OutputMuxSource<T>): [OutputMuxTarget<T>, () => void] {
   const [send, target, close] = usePipe<{ type: keyof T, value: T[keyof T] }>()
   let live = true
   Object.keys(input)
@@ -64,9 +90,9 @@ export function muxPipes<T>(input: PipeMuxSource<T>): [PipeMuxTarget<T>, () => v
   return [target, () => { live = false; close() }]
 }
 
-export type EventMuxSource<T> = { [name in keyof T]: EventOutput<T[name]> }
-export type EventMuxTarget<T> = EventOutput<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
-export function muxEvents<T>(input: EventMuxSource<T>): EventMuxTarget<T> {
+export type SubscriptionMuxSource<T> = { [name in keyof T]: Subscriptor<T[name]> }
+export type SubscriptionMuxTarget<T> = Subscriptor<{ [K in keyof T]: { type: K, value: T[K] } }[keyof T]>
+export function muxEvents<T>(input: SubscriptionMuxSource<T>): SubscriptionMuxTarget<T> {
   const [send, target] = useEvent<{ type: keyof T, value: T[keyof T] }>()
   const closeHandlers: (() => void)[] = []
   Object.keys(input)

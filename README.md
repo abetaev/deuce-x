@@ -391,6 +391,7 @@ rerer to:
 
 ## TODO
 
+- test use* functions
 - refactor TODO demo
 - support SVG namespace
 - generate jsx type definitions from standard
