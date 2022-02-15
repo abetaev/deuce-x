@@ -3,8 +3,6 @@
 
 import { h } from './jsx.ts'
 
-import type { } from './use.ts'
-
 /**
  * stateful component allows to extract state to separate
  * asynchronous generator/iterator or generator function.

@@ -1,7 +1,6 @@
 /// <reference no-default-lib="true" />
 /// <reference lib="DOM" />
 /// <reference lib="ES2021" />
-/// <reference path="./jsx.defs.ts" />
 
 type Desctructor = () => void
 
